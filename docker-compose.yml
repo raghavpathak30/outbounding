@@ -1,0 +1,16 @@
+services:
+  outbound-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: langgraph-outbound-pipeline
+    env_file:
+      - .env.example
+    environment:
+      - DRY_RUN=true
+      - APOLLO_MODE=stub
+      - DRAFTING_MODE=stub
+      - DELIVERY_MODE=stub
+    volumes:
+      - ./staged_deliveries:/app/staged_deliveries
+    command: ["--domain", "cyber-corp.com"]

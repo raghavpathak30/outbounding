@@ -1,0 +1,10 @@
+.git
+.gitignore
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+data/resume.json
+staged_deliveries/
+*.pdf

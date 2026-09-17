@@ -4,7 +4,7 @@
 # Architecture: Internet -> Caddy (:80/:443 HTTPS) -> 127.0.0.1:8000 (FastAPI/Uvicorn)
 # ==============================================================================
 
-work.raghavpatak.me {
+work.raghavpathak.me, work.raghavpatak.me {
     # 1. Reverse Proxy to Local FastAPI Uvicorn Instance
     reverse_proxy 127.0.0.1:8000 {
         header_up Host {host}

@@ -39,14 +39,23 @@ logger = logging.getLogger("server.app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure tables & backward-compatible migrations exist, then recover stale runs
+    # Startup: ensure tables & backward-compatible migrations exist
+    from server.database import init_db, SessionLocal
+    init_db()
+
+    # First-user bootstrap on startup (fails loudly if password is < 12 characters)
+    from server.services.auth import bootstrap_first_user
+    session_factory = getattr(app.state, "db_session_factory", None) or SessionLocal
+    with session_factory() as db_session:
+        bootstrap_first_user(db=db_session)
+
     try:
-        from server.database import init_db
-        init_db()
         JobManager.get_instance().recover_stale_runs()
     except Exception as e:
-        logger.warning(f"Error during startup initialization/recovery: {e}")
+        logger.warning(f"Error during background job recovery: {e}")
+
     yield
+
     # Shutdown: clean up background workers
     try:
         JobManager.get_instance().shutdown(wait=False)

@@ -43,7 +43,7 @@ class JobManager:
     Bridges web application selections to the core pipeline stages with stage-level checkpointing.
     """
     _instance: Optional["JobManager"] = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     @staticmethod
     def _sanitize_error_message(exc: Exception) -> str:
@@ -108,6 +108,8 @@ class JobManager:
         with cls._lock:
             if reset and cls._instance:
                 cls._instance.shutdown(wait=False)
+                cls._instance = None
+            if cls._instance is not None and getattr(cls._instance.executor, "_shutdown", False):
                 cls._instance = None
             if cls._instance is None:
                 cls._instance = cls(max_workers=max_workers, session_factory=session_factory)
@@ -576,3 +578,6 @@ class JobManager:
         """Gracefully shuts down thread pool executor."""
         logger.info("[JobManager] Shutting down executor...")
         self.executor.shutdown(wait=wait)
+        with JobManager._lock:
+            if JobManager._instance is self:
+                JobManager._instance = None

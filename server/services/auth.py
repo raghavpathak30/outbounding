@@ -3,6 +3,7 @@ Authentication service for Outbound Lead Generation Pipeline.
 Handles bcrypt password hashing (work factor 12), JWT issuance (2-hour expiry),
 token revocation via the database, silent token refresh, and login rate limiting.
 """
+import os
 import uuid
 import time
 import logging
@@ -12,7 +13,7 @@ from typing import Optional, Dict, Any
 import jwt
 import bcrypt
 from fastapi import Request, Response, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from server.models.entities import User, RevokedToken
@@ -233,3 +234,76 @@ async def get_current_user_and_refresh(
         response.headers["X-Token-Refreshed"] = "true"
 
     return user
+
+
+def bootstrap_first_user(
+    db: Session,
+    admin_email: Optional[str] = None,
+    admin_password: Optional[str] = None
+) -> bool:
+    """
+    Idempotent startup bootstrap for the initial administrator user.
+    If the users table is empty:
+      - Reads BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD from args or env.
+      - If both are present:
+          - Validates password length >= 12 characters (raises RuntimeError if too short).
+          - Validates email format contains '@'.
+          - Hashes password using AuthService.hash_password (bcrypt rounds 12).
+          - Inserts User and Profile records, committing transaction.
+          - Logs at INFO with the email (never the password).
+      - If either variable is missing or empty:
+          - Logs a clear WARNING naming both variables.
+          - Returns False without raising.
+    If any user already exists in the users table:
+      - Strictly no-ops and returns False. Never overwrites or resets existing accounts.
+    """
+    from server.models.entities import Profile
+
+    user_count = db.execute(select(func.count(User.id))).scalar() or 0
+    if user_count > 0:
+        return False
+
+    email = (admin_email if admin_email is not None else os.getenv("BOOTSTRAP_ADMIN_EMAIL", "")).strip()
+    password = admin_password if admin_password is not None else os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "")
+
+    if not email or not password:
+        logger.warning(
+            "Users table is empty and BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD are not set in environment. "
+            "Web login is unavailable until operator credentials are provided."
+        )
+        return False
+
+    if len(password) < 12:
+        error_msg = (
+            "BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters long. "
+            "Refusing startup to prevent weak admin credentials on host."
+        )
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+
+    clean_email = email.lower()
+    if "@" not in clean_email:
+        error_msg = f"Invalid BOOTSTRAP_ADMIN_EMAIL format: {email}. Must contain '@'."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    password_hash = AuthService.hash_password(password)
+    user = User(
+        email=clean_email,
+        password_hash=password_hash,
+        is_active=True
+    )
+    db.add(user)
+    db.flush()
+
+    profile = Profile(
+        user_id=user.id,
+        full_name="Admin Operator",
+        title="Administrator",
+        email=clean_email
+    )
+    db.add(profile)
+    db.commit()
+
+    logger.info("First-user bootstrap successfully initialized admin user: %s", clean_email)
+    return True

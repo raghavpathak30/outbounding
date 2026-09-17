@@ -378,6 +378,14 @@ def get_login_html() -> str:
       font-weight: 600;
       margin-bottom: 0.75rem;
     }
+    code {
+      background: #1e293b;
+      color: #93c5fd;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.76rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
   </style>
 </head>
 <body>
@@ -401,6 +409,9 @@ def get_login_html() -> str:
       </div>
       <button type="submit" class="btn-submit" id="submit-btn">Sign In</button>
     </form>
+    <div class="bootstrap-hint" style="margin-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--card-border); padding-top: 1rem; line-height: 1.45;">
+      First deployment? Set <code>BOOTSTRAP_ADMIN_EMAIL</code> and <code>BOOTSTRAP_ADMIN_PASSWORD</code> in <code>.env</code> to initialize operator access.
+    </div>
   </div>
 
   <script>

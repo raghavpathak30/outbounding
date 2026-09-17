@@ -443,6 +443,51 @@ DEPLOYMENT.md
 
 for the complete deployment procedure.
 
+### First-User Bootstrap (Initial Operator Provisioning)
+
+On a fresh deployment, open user registration is intentionally disabled. The application provides an idempotent startup bootstrap path that provisions the initial administrator account when the `users` table is empty.
+
+#### 1. Set Bootstrap Credentials
+Configure the bootstrap variables in `.env` (the password **must** be at least 12 characters long):
+
+```bash
+cat << 'EOF' >> .env
+BOOTSTRAP_ADMIN_EMAIL=operator@example.com
+BOOTSTRAP_ADMIN_PASSWORD=change_this_to_a_secure_password_12+
+EOF
+```
+
+#### 2. Start the Service
+Launch or restart the application to trigger the startup bootstrap routine:
+
+```bash
+# If running under systemd:
+systemctl --user restart outbound-pipeline
+
+# Or if running directly with uvicorn:
+.venv/bin/uvicorn server.app:app --host 127.0.0.1 --port 8000
+```
+
+Verify in the logs that the account was created:
+```bash
+# Expected output:
+# INFO:server.auth:First-user bootstrap successfully initialized admin user: operator@example.com
+journalctl --user -u outbound-pipeline -n 50 --no-pager | grep "bootstrap"
+```
+
+#### 3. Log In via Web Cockpit
+Navigate to `https://work.raghavpatak.me/login` (or `http://127.0.0.1:8000/login`) and authenticate using the bootstrap email and password.
+
+#### 4. Unset Bootstrap Credentials
+Once logged in, remove the bootstrap credentials from `.env` to ensure secrets hygiene:
+
+```bash
+# Remove bootstrap credentials from .env
+sed -i '/^BOOTSTRAP_ADMIN_/d' .env
+```
+
+The database now persists the administrator user. On subsequent restarts, the bootstrap routine detects existing users and strictly no-ops.
+
 ---
 
 ## Backup & Recovery

@@ -31,7 +31,7 @@ async def list_campaigns(
 ):
     """Lists all outreach campaigns created by the authenticated user."""
     campaigns = CampaignService.list_campaigns(db, current_user.id)
-    return [format_campaign_response(c) for c in campaigns]
+    return [format_campaign_response(c, db) for c in campaigns]
 
 
 @router.post("", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
@@ -42,7 +42,7 @@ async def create_campaign(
 ):
     """Creates a new campaign for the authenticated user."""
     campaign = CampaignService.create_campaign(db, current_user.id, payload)
-    return format_campaign_response(campaign)
+    return format_campaign_response(campaign, db)
 
 
 @router.get("/{campaign_id}", response_model=CampaignResponse)
@@ -58,7 +58,7 @@ async def get_campaign(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Campaign not found."
         )
-    return format_campaign_response(campaign)
+    return format_campaign_response(campaign, db)
 
 
 @router.post("/{campaign_id}/discover", status_code=status.HTTP_200_OK)

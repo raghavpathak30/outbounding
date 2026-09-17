@@ -28,10 +28,12 @@ uploads/
 *.docx
 data/resume.json
 
-# Staged deliveries, contacted logs, and runtime outputs
+# Staged deliveries, contacted logs, backups, and runtime outputs
 staged_deliveries/
 contacted_companies.jsonl
 discarded_candidates.jsonl
+backups/
+logs/
 *.log
 
 # Python cache & artifacts

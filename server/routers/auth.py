@@ -96,14 +96,22 @@ async def login(
         algorithm=settings.jwt_algorithm
     )
 
-    # Set httpOnly cookie
+    # Set httpOnly cookie (secure over HTTPS or if explicitly configured)
     max_age_seconds = int(DEFAULT_EXPIRATION_HOURS * 3600)
+    is_secure = (
+        settings.secure_cookies
+        if settings.secure_cookies is not None
+        else (
+            request.headers.get("x-forwarded-proto") == "https"
+            or request.url.scheme == "https"
+        )
+    )
     response.set_cookie(
         key=ACCESS_TOKEN_COOKIE_NAME,
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,  # Set to True over HTTPS
+        secure=is_secure,
         max_age=max_age_seconds
     )
 

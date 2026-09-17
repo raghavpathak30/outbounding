@@ -6,7 +6,7 @@ import os
 from pipeline.state import PipelineState
 from pipeline.adapters.base import AdapterFactory
 from pipeline.contacted_log import record_contacted
-from pipeline.config import ALLOW_ACCEPT_ALL
+from pipeline.config import ALLOW_ACCEPT_ALL, is_blacklisted
 
 def delivery_node(state: PipelineState) -> Dict[str, Any]:
     """
@@ -44,6 +44,12 @@ def delivery_node(state: PipelineState) -> Dict[str, Any]:
         return {
             "delivery_status": "skipped_fabricated_contact",
             "delivery_error": "refused_fabrication_attempt"
+        }
+
+    if is_blacklisted(email_lower, domain):
+        return {
+            "delivery_status": "skipped_blacklisted",
+            "delivery_error": "refused_blacklisted_recipient"
         }
 
     ver_status = state.get("email_verification_status")

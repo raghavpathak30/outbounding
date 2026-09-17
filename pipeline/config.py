@@ -6,6 +6,7 @@ Runs 100% on Gemini free tier by default with zero Pro models.
 import os
 import time
 import logging
+import threading
 from typing import Optional, Callable, Any
 
 logger = logging.getLogger("pipeline.config")
@@ -66,30 +67,110 @@ MIN_EMAIL_CONFIDENCE = get_min_email_confidence()
 MIN_PERSON_CONFIDENCE = get_min_person_confidence()
 ALLOW_ACCEPT_ALL = get_allow_accept_all()
 
-# Global state tracking last Gemini invocation time for proactive pacing
+# Blacklist and Anti-Fabrication definitions
+SYNTHETIC_EMAIL_PATTERNS = [
+    "alex.morgan@",
+    "placeholder@",
+    "synthetic@"
+]
+
+DEFAULT_BLACKLISTED_DOMAINS = {
+    "example.com",
+    "example.org",
+    "example.net",
+    "test.com",
+    "localhost",
+    "invalid",
+    "sample.com"
+}
+
+
+def is_blacklisted(email: Optional[str], domain: Optional[str] = None) -> bool:
+    """
+    Evaluates whether an email address or company domain is blacklisted or synthetic.
+    Normalizes inputs (case-insensitive, whitespace stripped) and handles malformed strings safely.
+    Checks:
+      1. Synthetic / anti-fabrication email patterns (e.g., alex.morgan@, placeholder@).
+      2. Configured BLACKLISTED_EMAILS environment variable.
+      3. Default and configured BLACKLISTED_DOMAINS environment variable.
+    """
+    email_clean = (email or "").strip().lower() if email else ""
+    domain_clean = (domain or "").strip().lower() if domain else ""
+
+    # If domain wasn't passed explicitly, extract from email if valid
+    if not domain_clean and "@" in email_clean:
+        parts = email_clean.split("@", 1)
+        if len(parts) == 2 and parts[1]:
+            domain_clean = parts[1]
+
+    # Strip protocol / www prefix from domain if present
+    if domain_clean.startswith("https://"):
+        domain_clean = domain_clean[8:]
+    elif domain_clean.startswith("http://"):
+        domain_clean = domain_clean[7:]
+    if domain_clean.startswith("www."):
+        domain_clean = domain_clean[4:]
+    domain_clean = domain_clean.split("/")[0].strip()
+
+    # 1. Anti-fabrication / synthetic email checks
+    if email_clean:
+        for pattern in SYNTHETIC_EMAIL_PATTERNS:
+            if pattern in email_clean:
+                return True
+        local_part = email_clean.split("@")[0]
+        if any(fake in local_part for fake in ["alex.morgan", "placeholder", "synthetic"]):
+            return True
+
+    # 2. Configured blacklisted emails
+    env_emails = os.getenv("BLACKLISTED_EMAILS", "")
+    if env_emails and email_clean:
+        blacklisted_emails = {e.strip().lower() for e in env_emails.split(",") if e.strip()}
+        if email_clean in blacklisted_emails:
+            return True
+
+    # 3. Domain checks (defaults + configured)
+    env_domains = os.getenv("BLACKLISTED_DOMAINS", "")
+    configured_domains = {d.strip().lower() for d in env_domains.split(",") if d.strip()}
+    all_blacklisted_domains = DEFAULT_BLACKLISTED_DOMAINS | configured_domains
+
+    if domain_clean:
+        if domain_clean in all_blacklisted_domains:
+            return True
+        # Also check parent domain (e.g. sub.example.com -> example.com)
+        for bd in all_blacklisted_domains:
+            if domain_clean.endswith("." + bd):
+                return True
+
+    return False
+
+# Global state tracking last Gemini invocation time for proactive pacing (thread-safe)
+_gemini_pacing_lock = threading.Lock()
 _last_gemini_call_time: float = 0.0
 
 
 def reset_pacing_state():
     """Resets call timestamp state (primarily used in test fixtures)."""
     global _last_gemini_call_time
-    _last_gemini_call_time = 0.0
+    with _gemini_pacing_lock:
+        _last_gemini_call_time = 0.0
 
 
 def pace_gemini_call(delay_ms: Optional[int] = None):
     """
     Proactively pauses execution to ensure at least delay_ms has elapsed since
     the previous Gemini call, preventing bursts from tripping free-tier RPM limits.
+    Guaranteed thread-safe across concurrent background pipeline workers.
     """
     global _last_gemini_call_time
-    target_delay_ms = delay_ms if delay_ms is not None else get_gemini_call_delay_ms()
-    if target_delay_ms > 0 and _last_gemini_call_time > 0:
-        elapsed_ms = (time.time() - _last_gemini_call_time) * 1000.0
-        if elapsed_ms < target_delay_ms:
-            sleep_sec = (target_delay_ms - elapsed_ms) / 1000.0
-            logger.info(f"Pacing Gemini call: sleeping {sleep_sec:.3f}s to respect RPM limits.")
-            time.sleep(sleep_sec)
-    _last_gemini_call_time = time.time()
+    with _gemini_pacing_lock:
+        target_delay_ms = delay_ms if delay_ms is not None else get_gemini_call_delay_ms()
+        if target_delay_ms > 0 and _last_gemini_call_time > 0:
+            elapsed_ms = (time.time() - _last_gemini_call_time) * 1000.0
+            if elapsed_ms < target_delay_ms:
+                sleep_sec = (target_delay_ms - elapsed_ms) / 1000.0
+                logger.info(f"Pacing Gemini call: sleeping {sleep_sec:.3f}s to respect RPM limits.")
+                time.sleep(sleep_sec)
+        _last_gemini_call_time = time.time()
 
 
 # Quota Exhaustion Reporting & Exceptions

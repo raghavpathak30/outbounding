@@ -70,10 +70,17 @@ class CampaignResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    total_companies: int = 0
+    selected_companies: int = 0
+    in_progress_count: int = 0
+    waiting_for_review_count: int = 0
+    waiting_for_delivery_count: int = 0
+    sent_count: int = 0
+    staged_count: int = 0
 
 
-def format_campaign_response(campaign: Campaign) -> CampaignResponse:
-    """Helper to convert database Campaign model to response schema with parsed lists."""
+def format_campaign_response(campaign: Campaign, db: Optional[Session] = None) -> CampaignResponse:
+    """Helper to convert database Campaign model to response schema with parsed lists and optional metrics."""
     roles = []
     if campaign.target_roles_json:
         try:
@@ -87,6 +94,33 @@ def format_campaign_response(campaign: Campaign) -> CampaignResponse:
             techs = json.loads(campaign.technologies_json)
         except Exception:
             techs = []
+
+    total_comps = 0
+    selected_comps = 0
+    in_prog = 0
+    wait_rev = 0
+    wait_deliv = 0
+    sent_cnt = 0
+    staged_cnt = 0
+
+    if db is not None:
+        from sqlalchemy import func
+        from server.models.entities import Company, PipelineRun, Delivery
+        total_comps = db.execute(select(func.count(Company.id)).where(Company.campaign_id == campaign.id)).scalar() or 0
+        selected_comps = db.execute(select(func.count(Company.id)).where(Company.campaign_id == campaign.id, Company.selection_status == "selected")).scalar() or 0
+        in_prog = db.execute(select(func.count(PipelineRun.id)).where(PipelineRun.campaign_id == campaign.id, PipelineRun.status.in_(["queued", "running"]))).scalar() or 0
+        wait_rev = db.execute(select(func.count(PipelineRun.id)).where(PipelineRun.campaign_id == campaign.id, PipelineRun.status == "waiting_for_review")).scalar() or 0
+        wait_deliv = db.execute(select(func.count(PipelineRun.id)).where(PipelineRun.campaign_id == campaign.id, PipelineRun.status == "waiting_for_delivery")).scalar() or 0
+        sent_cnt = db.execute(
+            select(func.count(Delivery.id))
+            .join(PipelineRun, Delivery.pipeline_run_id == PipelineRun.id)
+            .where(PipelineRun.campaign_id == campaign.id, Delivery.delivery_status == "sent")
+        ).scalar() or 0
+        staged_cnt = db.execute(
+            select(func.count(Delivery.id))
+            .join(PipelineRun, Delivery.pipeline_run_id == PipelineRun.id)
+            .where(PipelineRun.campaign_id == campaign.id, Delivery.delivery_status == "staged")
+        ).scalar() or 0
 
     return CampaignResponse(
         id=campaign.id,
@@ -105,6 +139,13 @@ def format_campaign_response(campaign: Campaign) -> CampaignResponse:
         status=campaign.status,
         created_at=campaign.created_at,
         updated_at=campaign.updated_at,
+        total_companies=total_comps,
+        selected_companies=selected_comps,
+        in_progress_count=in_prog,
+        waiting_for_review_count=wait_rev,
+        waiting_for_delivery_count=wait_deliv,
+        sent_count=sent_cnt,
+        staged_count=staged_cnt,
     )
 
 

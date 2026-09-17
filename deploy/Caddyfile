@@ -1,0 +1,60 @@
+# ==============================================================================
+# Caddyfile: Production Reverse Proxy for Autonomous Outbound Pipeline
+# Domain: work.raghavpatak.me
+# Architecture: Internet -> Caddy (:80/:443 HTTPS) -> 127.0.0.1:8000 (FastAPI/Uvicorn)
+# ==============================================================================
+
+work.raghavpatak.me {
+    # 1. Reverse Proxy to Local FastAPI Uvicorn Instance
+    reverse_proxy 127.0.0.1:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # 2. Strict Security Headers
+    header {
+        # Enforce HTTPS for 1 year with all subdomains and HSTS preload list eligibility
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # Prevent MIME-type confusion attacks
+        X-Content-Type-Options "nosniff"
+        # Prevent UI redressing / clickjacking
+        X-Frame-Options "DENY"
+        # Avoid leaking sensitive URL paths across domains
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Disable unused browser device hardware features
+        Permissions-Policy "geolocation=(), camera=(), microphone=()"
+        # Content Security Policy (allows inline scripts/styles and Google Fonts used by operator cockpit)
+        Content-Security-Policy "default-src 'self'; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+        # Suppress Caddy server identification header
+        -Server
+    }
+
+    # 3. Path Quarantining: Block Direct Access to Database, Uploads, Staging, Logs, and Secrets
+    @forbidden {
+        path /data/*
+        path /uploads/*
+        path /staged_deliveries/*
+        path /backups/*
+        path /logs/*
+        path /.env*
+        path /*.db*
+        path /*.sqlite*
+        path /*.jsonl
+    }
+    respond @forbidden "Access Denied: Protected internal resource." 403
+
+    # 4. Request Body Limit (15MB to allow 10MB PDF resume uploads + multipart overhead)
+    request_body {
+        max_size 15MB
+    }
+
+    # 5. Production Access Logging
+    log {
+        output file /var/log/caddy/outbound_pipeline_access.log {
+            roll_size 20mb
+            roll_keep 5
+        }
+    }
+}

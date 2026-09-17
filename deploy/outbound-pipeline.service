@@ -1,0 +1,41 @@
+[Unit]
+Description=Autonomous Outbound Lead Generation Pipeline
+Documentation=https://github.com/raghavpathak30/outbounding
+After=network.target
+
+[Service]
+Type=simple
+User=raghavp
+Group=raghavp
+WorkingDirectory=/home/raghavp/projects/outbound-pipeline
+EnvironmentFile=/home/raghavp/projects/outbound-pipeline/.env
+
+# Bind strictly to loopback 127.0.0.1 on port 8000 with exactly 1 worker process
+# (Worker count = 1 preserves the process-level delivery lock invariant)
+ExecStart=/home/raghavp/projects/outbound-pipeline/.venv/bin/uvicorn server.app:app --host 127.0.0.1 --port 8000 --workers 1
+
+# Automatic Restart on failure with 5s backoff
+Restart=always
+RestartSec=5s
+
+# Standard Logging to systemd journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=outbound-pipeline
+
+# File descriptor limits
+LimitNOFILE=65535
+
+# Linux Process & Filesystem Security Sandboxing
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/raghavp/projects/outbound-pipeline/data /home/raghavp/projects/outbound-pipeline/uploads /home/raghavp/projects/outbound-pipeline/staged_deliveries /home/raghavp/projects/outbound-pipeline/logs /home/raghavp/projects/outbound-pipeline/backups
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

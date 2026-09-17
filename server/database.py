@@ -4,7 +4,7 @@ Database connection, session management, and SQLite WAL configuration.
 import os
 from pathlib import Path
 from typing import Generator
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text, inspect
 from sqlalchemy.orm import sessionmaker, Session
 from server.models.base import Base
 # Import all entities so Base.metadata knows about them
@@ -51,9 +51,23 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db(target_engine=None) -> None:
-    """Creates all database tables defined in Base metadata."""
+    """
+    Creates all database tables defined in Base metadata,
+    and safely applies backward-compatible migrations for existing databases.
+    """
     e = target_engine or engine
     Base.metadata.create_all(bind=e)
+
+    # Safe Phase-6 schema migration: ensure checkpoint_state_json exists on pipeline_runs
+    try:
+        inspector = inspect(e)
+        if "pipeline_runs" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("pipeline_runs")]
+            if "checkpoint_state_json" not in columns:
+                with e.begin() as conn:
+                    conn.execute(text("ALTER TABLE pipeline_runs ADD COLUMN checkpoint_state_json TEXT;"))
+    except Exception:
+        pass
 
 
 def reset_db(target_engine=None) -> None:

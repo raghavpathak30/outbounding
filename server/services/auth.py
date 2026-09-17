@@ -214,12 +214,20 @@ async def get_current_user_and_refresh(
             expires_delta=timedelta(hours=DEFAULT_EXPIRATION_HOURS),
             algorithm=settings.jwt_algorithm
         )
+        is_secure = (
+            settings.secure_cookies
+            if settings.secure_cookies is not None
+            else (
+                request.headers.get("x-forwarded-proto") == "https"
+                or request.url.scheme == "https"
+            )
+        )
         response.set_cookie(
             key=ACCESS_TOKEN_COOKIE_NAME,
             value=fresh_token,
             httponly=True,
             samesite="lax",
-            secure=False,  # Set to True in production over HTTPS
+            secure=is_secure,
             max_age=int(timedelta(hours=DEFAULT_EXPIRATION_HOURS).total_seconds())
         )
         response.headers["X-Token-Refreshed"] = "true"

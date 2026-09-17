@@ -179,9 +179,10 @@ class PipelineRun(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     campaign_id: Mapped[str] = mapped_column(String(36), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
     company_id: Mapped[str] = mapped_column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(32), default="queued", nullable=False, index=True)  # queued, running, waiting_for_review, completed, failed, skipped, cancelled
+    status: Mapped[str] = mapped_column(String(32), default="queued", nullable=False, index=True)  # queued, running, waiting_for_review, waiting_for_delivery, completed, failed, skipped, cancelled
     last_completed_stage: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # discovery_completed, person_verified, email_resolved, draft_generated
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    checkpoint_state_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 

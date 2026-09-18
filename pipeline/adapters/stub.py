@@ -113,13 +113,23 @@ class StubDiscoveryAdapter(DiscoveryAdapter):
         }
     ]
 
+    def __init__(self, targeting: Optional[Dict[str, Any]] = None):
+        self.targeting = dict(targeting) if targeting else {}
+
     @classmethod
     def reset_rotation(cls):
         """Resets the rotation pointer for deterministic testing."""
         cls._rotation_idx = 0
 
-    def discover(self, limit: int = 10, company_size: str = "any") -> List[Dict[str, Any]]:
-        size_filter = (company_size or "any").lower().strip()
+    def discover(
+        self,
+        limit: int = 10,
+        company_size: str = "any",
+        targeting: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        active_targeting = {**self.targeting, **(targeting or {})}
+        effective_size = company_size or active_targeting.get("company_size", "any")
+        size_filter = (effective_size or "any").lower().strip()
         if size_filter == "small":
             candidates = [c for c in self.CANDIDATES if c["size"] <= 10]
         elif size_filter == "established":

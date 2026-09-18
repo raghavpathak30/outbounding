@@ -6,9 +6,10 @@ import os
 import re
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from pipeline.adapters.base import PersonResearchAdapter
+from pipeline.adapters._llm_text import extract_llm_text
 from pipeline.config import (
     get_person_research_model,
     MIN_PERSON_CONFIDENCE,
@@ -46,7 +47,8 @@ class GeminiPersonResearchAdapter(PersonResearchAdapter):
         self,
         domain: str,
         company_name: Optional[str] = None,
-        company_context: Optional[Dict[str, Any]] = None
+        company_context: Optional[Dict[str, Any]] = None,
+        target_roles: Optional[List[str]] = None
     ) -> str:
         name_str = company_name or domain
         ctx_str = ""
@@ -54,6 +56,23 @@ class GeminiPersonResearchAdapter(PersonResearchAdapter):
             signal = company_context.get("signal") or company_context.get("headline") or ""
             stack = company_context.get("tech_stack") or ""
             ctx_str = f"Target Context: {signal}. Tech Stack: {stack}."
+
+        if target_roles and isinstance(target_roles, list) and any(r.strip() for r in target_roles if isinstance(r, str)):
+            roles_list = "\n".join(f"{idx+1}. {r.strip()}" for idx, r in enumerate(target_roles) if isinstance(r, str) and r.strip())
+            role_hierarchy = (
+                f"CAMPAIGN-SPECIFIC TARGET ROLES (SEARCH IN THIS PRIORITY ORDER):\n"
+                f"{roles_list}\n"
+                f"Fallback leadership roles if specific targets unavailable: CTO, Technical Co-Founder, VP Engineering, Head of Engineering."
+            )
+        else:
+            role_hierarchy = (
+                f"ROLE HIERARCHY (SELECT EXACTLY ONE BEST CANDIDATE IN THIS ORDER):\n"
+                f"1. CTO / Chief Technology Officer\n"
+                f"2. Technical Co-Founder / Co-Founder & CTO\n"
+                f"3. VP of Engineering / VP Engineering\n"
+                f"4. Head of Engineering / Engineering Lead\n"
+                f"5. Founder & CEO (especially if the startup is early-stage/small)"
+            )
 
         prompt = (
             f"You are an expert executive talent intelligence agent. Use your Google Search tool to identify the "
@@ -64,12 +83,7 @@ class GeminiPersonResearchAdapter(PersonResearchAdapter):
             f"1. First-party company web presence: site:{domain} (/about, /team, /leadership, technical blog, or engineering posts)\n"
             f"2. Executive professional profiles: (\"{name_str}\" OR \"{domain}\") (CTO OR \"Chief Technology Officer\" OR Founder OR \"VP of Engineering\" OR \"Head of Engineering\")\n"
             f"3. Technical press & corporate registries: TechCrunch, Crunchbase, GitHub org, or funding releases\n\n"
-            f"ROLE HIERARCHY (SELECT EXACTLY ONE BEST CANDIDATE IN THIS ORDER):\n"
-            f"1. CTO / Chief Technology Officer\n"
-            f"2. Technical Co-Founder / Co-Founder & CTO\n"
-            f"3. VP of Engineering / VP Engineering\n"
-            f"4. Head of Engineering / Engineering Lead\n"
-            f"5. Founder & CEO (especially if the startup is early-stage/small)\n\n"
+            f"{role_hierarchy}\n\n"
             f"MANDATORY SEARCH GROUNDING REQUIREMENTS:\n"
             f"1. You MUST verify that this person is currently in this role and associated with {domain}.\n"
             f"2. Reject former employees, advisors, non-technical executives (unless early solo founder), or contractors.\n"
@@ -124,13 +138,12 @@ class GeminiPersonResearchAdapter(PersonResearchAdapter):
             grounding_sources = []
 
             if response:
-                if hasattr(response, "text") and response.text:
-                    raw_text = response.text
+                extracted = extract_llm_text(response)
+                if extracted:
+                    raw_text = extracted
                 elif response.candidates and response.candidates[0].content:
                     parts = response.candidates[0].content.parts or []
-                    raw_text = "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", ""))
-                else:
-                    raw_text = str(response)
+                    raw_text = "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", "")).strip()
 
                 # Extract SDK-level grounding metadata if present
                 try:
@@ -250,9 +263,10 @@ class GeminiPersonResearchAdapter(PersonResearchAdapter):
         self,
         domain: str,
         company_name: Optional[str] = None,
-        company_context: Optional[Dict[str, Any]] = None
+        company_context: Optional[Dict[str, Any]] = None,
+        target_roles: Optional[List[str]] = None
     ) -> Optional[Dict[str, Any]]:
-        prompt = self.build_research_prompt(domain, company_name, company_context)
+        prompt = self.build_research_prompt(domain, company_name, company_context, target_roles=target_roles)
         try:
             raw_text, grounding_sources = self._query_gemini(prompt)
         except DailyQuotaExhaustedError:
@@ -333,7 +347,8 @@ class StubPersonResearchAdapter(PersonResearchAdapter):
         self,
         domain: str,
         company_name: Optional[str] = None,
-        company_context: Optional[Dict[str, Any]] = None
+        company_context: Optional[Dict[str, Any]] = None,
+        target_roles: Optional[List[str]] = None
     ) -> Optional[Dict[str, Any]]:
         d_lower = (domain or "").lower().strip()
         if d_lower in self.MOCK_LEADERS:

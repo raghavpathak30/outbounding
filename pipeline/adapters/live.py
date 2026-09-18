@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any, List
 import requests
 from pipeline.adapters.base import EnrichmentAdapter, DraftingAdapter, DeliveryAdapter, DiscoveryAdapter
 from pipeline.adapters.research import ResearchDiscoveryAdapter
+from pipeline.adapters._llm_text import extract_llm_text
 from pipeline.config import (
     GEMINI_DRAFTING_MODEL,
     get_drafting_model,
@@ -292,7 +293,7 @@ class LiveDraftingAdapter(DraftingAdapter):
     
     def __init__(self, model_name: Optional[str] = None):
         self.api_key = os.getenv("GEMINI_API_KEY", "")
-        self.model_name = model_name or get_drafting_model()
+        self.model_name = model_name or os.getenv("GEMINI_DRAFTING_MODEL", os.getenv("GEMINI_MODEL", "gemini-2.5-pro"))
 
     def build_prompt(
         self,
@@ -414,9 +415,8 @@ class LiveDraftingAdapter(DraftingAdapter):
                         )
                     )
                     response = chat.send_message(system_instruction)
-                    if response and hasattr(response, "text") and response.text:
-                        return response.text.strip()
-                    return ""
+                    text = extract_llm_text(response)
+                    return text or ""
                 else:
                     from langchain_google_genai import ChatGoogleGenerativeAI
                     llm = ChatGoogleGenerativeAI(
@@ -425,9 +425,8 @@ class LiveDraftingAdapter(DraftingAdapter):
                         temperature=0.3
                     )
                     response = llm.invoke([{"role": "user", "content": system_instruction}])
-                    if response and response.content:
-                        return str(response.content).strip()
-                    return ""
+                    text = extract_llm_text(response)
+                    return text or ""
 
             try:
                 res = execute_with_quota_retry(_call_gemini, adapter_name="LiveDraftingAdapter")
@@ -742,21 +741,123 @@ class LiveDiscoveryAdapter(DiscoveryAdapter):
     """
     Live discovery adapter querying Apollo's organization search endpoint:
     https://api.apollo.io/v1/organizations/search
-    Filtered by technical profile tags: applied cryptography, cybersecurity, fintech fraud detection, AI/LLM infrastructure, AI security.
-    Supports employee count filtering based on company_size ('small', 'established', 'any').
+
+    Fully modular per campaign run:
+    - Apollo Pre-Filters:
+      * q_organization_keyword_tags: mapped dynamically from campaign 'industry' and 'technologies'.
+      * organization_locations: mapped dynamically from campaign 'target_geography' / 'geography'.
+      * organization_num_employees_ranges: mapped dynamically from campaign 'company_size'.
+    - Local Post-Filters & Scoring (RankingEngine):
+      * 'company_stage' (Apollo requires internal GUIDs; scored deterministically post-hoc).
+      * 'target_roles' (Passed downstream to PersonResearchAdapter.find_leader).
+
+    Zero hardcoded targeting criteria exist in this class.
     """
-    TARGET_KEYWORDS = [
-        "applied cryptography",
-        "cybersecurity",
-        "fintech fraud detection",
-        "AI infrastructure",
-        "AI security"
-    ]
 
-    def __init__(self):
-        self.apollo_key = os.getenv("APOLLO_API_KEY", "")
+    def __init__(self, targeting: Optional[Dict[str, Any]] = None, apollo_key: Optional[str] = None):
+        self.apollo_key = apollo_key or os.getenv("APOLLO_API_KEY", "")
+        self.targeting = dict(targeting) if targeting else {}
 
-    def discover(self, limit: int = 10, company_size: str = "any") -> List[Dict[str, Any]]:
+    @staticmethod
+    def _extract_keyword_tags(targeting: Dict[str, Any]) -> List[str]:
+        """
+        Derives Apollo organization keyword tags from campaign industry and technologies.
+        Returns clean, deduplicated list of tags. Returns empty list if unspecified.
+        """
+        keywords: List[str] = []
+        industry = targeting.get("industry")
+        if industry and isinstance(industry, str) and industry.strip():
+            # Split comma, slash, semicolon separated industry phrases
+            parts = [p.strip() for p in re.split(r"[,/;\n]+", industry) if p.strip()]
+            for p in parts:
+                if p and p not in keywords:
+                    keywords.append(p)
+
+        techs = targeting.get("technologies") or []
+        if isinstance(techs, str):
+            try:
+                techs = json.loads(techs)
+            except Exception:
+                techs = [t.strip() for t in techs.split(",") if t.strip()]
+        if isinstance(techs, list):
+            for t in techs:
+                if isinstance(t, str) and t.strip() and t.strip() not in keywords:
+                    keywords.append(t.strip())
+
+        return keywords
+
+    @staticmethod
+    def _extract_locations(targeting: Dict[str, Any]) -> List[str]:
+        """
+        Derives Apollo organization_locations filter from campaign geography.
+        Apollo expects an array of country names, states, or cities (e.g. ['India'], ['United States']).
+        Ignores generic/unconstrained terms like 'any', 'all', 'global', 'worldwide', 'remote'.
+        """
+        geo = targeting.get("geography") or targeting.get("target_geography")
+        if not geo or not isinstance(geo, str):
+            return []
+
+        clean_geo = geo.strip()
+        if not clean_geo or clean_geo.lower() in ["any", "all", "global", "worldwide", "remote", "none", "unstated"]:
+            return []
+
+        # Split comma-separated multiple geographies if provided
+        parts = [p.strip() for p in clean_geo.split(",") if p.strip()]
+        return parts if parts else [clean_geo]
+
+    @staticmethod
+    def _extract_employee_ranges(company_size: Optional[str]) -> List[str]:
+        """
+        Maps company_size to Apollo organization_num_employees_ranges.
+        'small' -> ['1,10']
+        'established' -> ['21,50', '51,100', ...]
+        'any' or unstated -> [] (no filter)
+        """
+        size_filter = (company_size or "any").lower().strip()
+        if size_filter == "small":
+            return ["1,10"]
+        elif size_filter == "established":
+            return ["21,50", "51,100", "101,250", "251,500", "501,1000", "1001,5000", "5001,10000", "10001"]
+        return []
+
+    def build_payload(
+        self,
+        limit: int = 10,
+        company_size: Optional[str] = None,
+        targeting: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Constructs the Apollo search payload using active per-campaign targeting criteria.
+        """
+        active_targeting = {**self.targeting, **(targeting or {})}
+        effective_size = company_size if company_size is not None else active_targeting.get("company_size", "any")
+
+        payload: Dict[str, Any] = {
+            "api_key": self.apollo_key,
+            "page": 1,
+            "per_page": max(limit * 2, 10),
+        }
+
+        keyword_tags = self._extract_keyword_tags(active_targeting)
+        if keyword_tags:
+            payload["q_organization_keyword_tags"] = keyword_tags
+
+        locations = self._extract_locations(active_targeting)
+        if locations:
+            payload["organization_locations"] = locations
+
+        employee_ranges = self._extract_employee_ranges(effective_size)
+        if employee_ranges:
+            payload["organization_num_employees_ranges"] = employee_ranges
+
+        return payload
+
+    def discover(
+        self,
+        limit: int = 10,
+        company_size: Optional[str] = None,
+        targeting: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         if not self.apollo_key:
             logger.warning("APOLLO_API_KEY not set; live discovery cannot execute.")
             return []
@@ -768,21 +869,7 @@ class LiveDiscoveryAdapter(DiscoveryAdapter):
             "X-Api-Key": self.apollo_key,
         }
 
-        size_filter = (company_size or "any").lower().strip()
-        employee_ranges: List[str] = []
-        if size_filter == "small":
-            employee_ranges = ["1,10"]
-        elif size_filter == "established":
-            employee_ranges = ["21,50", "51,100", "101,250", "251,500", "501,1000", "1001,5000", "5001,10000", "10001"]
-
-        payload: Dict[str, Any] = {
-            "api_key": self.apollo_key,
-            "q_organization_keyword_tags": self.TARGET_KEYWORDS,
-            "page": 1,
-            "per_page": max(limit * 2, 10),
-        }
-        if employee_ranges:
-            payload["organization_num_employees_ranges"] = employee_ranges
+        payload = self.build_payload(limit=limit, company_size=company_size, targeting=targeting)
 
         try:
             resp = requests.post(url, json=payload, headers=headers, timeout=15)
@@ -834,6 +921,15 @@ class LiveDiscoveryAdapter(DiscoveryAdapter):
             tech_names = org.get("technology_names") or org.get("technologies") or []
             tech_stack = ", ".join(tech_names[:8]) if isinstance(tech_names, list) else ""
 
+            # Extract location for downstream local ranking
+            city = org.get("city") or ""
+            state = org.get("state") or ""
+            country = org.get("country") or ""
+            loc_parts = [p for p in [city, state, country] if p]
+            location = ", ".join(loc_parts) if loc_parts else (org.get("location") or "")
+
+            stage = org.get("stage") or org.get("latest_funding_round_type") or ""
+
             short_desc = org.get("short_description") or org.get("seo_description") or ""
             headline = short_desc or f"{name} operating in {industry}"
 
@@ -844,6 +940,8 @@ class LiveDiscoveryAdapter(DiscoveryAdapter):
                 signals.append(f"Industry: {industry}")
             if size:
                 signals.append(f"{size} employees")
+            if location:
+                signals.append(f"Location: {location}")
             keywords = org.get("keywords")
             if keywords and isinstance(keywords, list):
                 signals.append("Focus areas: " + ", ".join(keywords[:4]))
@@ -860,6 +958,8 @@ class LiveDiscoveryAdapter(DiscoveryAdapter):
                 "company_name": name,
                 "industry": industry,
                 "size": size,
+                "location": location,
+                "stage": stage,
                 "funding": funding,
                 "company_context": company_context
             })
@@ -876,4 +976,5 @@ class LiveDiscoveryAdapter(DiscoveryAdapter):
         d = re.sub(r"^www\.", "", d)
         d = d.split("/")[0].split("?")[0].strip()
         return d
+
 

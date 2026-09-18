@@ -11,6 +11,7 @@ Validates Phase 5 requirements:
 - Authentication enforcement on all endpoints
 """
 import json
+from typing import Optional, Dict, Any, List
 import pytest
 from starlette.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
@@ -38,7 +39,7 @@ class MockCustomDiscoveryAdapter(DiscoveryAdapter):
     def __init__(self, candidates):
         self.candidates = candidates
 
-    def discover(self, limit: int = 10, company_size: str = "any"):
+    def discover(self, limit: int = 10, company_size: str = "any", targeting: Optional[Dict[str, Any]] = None):
         return list(self.candidates[:limit])
 
 

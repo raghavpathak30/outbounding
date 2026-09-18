@@ -1504,6 +1504,18 @@ def get_campaign_detail_html() -> str:
       </div>
     </div>
 
+    <!-- Targeting Application Microcopy -->
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.85rem 1.25rem; margin-top:1rem; font-size:0.82rem; line-height:1.5; color:var(--text-secondary);">
+      <div style="font-weight:600; color:var(--text-primary); margin-bottom:0.35rem;">
+        How targeting is applied for this campaign
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:1.25rem;">
+        <div><strong style="color:var(--text-primary);">Search filters:</strong> Location, industry, and company size narrow the initial company search.</div>
+        <div><strong style="color:var(--text-primary);">Match scoring:</strong> Funding stage and technologies determine relevance and rank candidates in the table below.</div>
+        <div><strong style="color:var(--text-primary);">Leadership search:</strong> Target roles guide who we look for when identifying verified technical leaders.</div>
+      </div>
+    </div>
+
     <!-- Selection & Enqueue Banner -->
     <div class="selection-banner" id="enqueue-banner">
       <div>

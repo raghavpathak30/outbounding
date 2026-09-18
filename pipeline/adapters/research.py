@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any, List
 import requests
 
 from pipeline.adapters.base import DiscoveryAdapter
+from pipeline.adapters._llm_text import extract_llm_text
 from pipeline.config import (
     GEMINI_DISCOVERY_MODEL,
     get_discovery_model,
@@ -46,9 +47,10 @@ class ResearchDiscoveryAdapter(DiscoveryAdapter):
         "AI security (LLM guardrails, jailbreak defenses, automated red-teaming, prompt injection defense, agent safety)"
     ]
 
-    def __init__(self, model_name: Optional[str] = None):
+    def __init__(self, model_name: Optional[str] = None, targeting: Optional[Dict[str, Any]] = None):
         self.api_key = os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
         self.model_name = model_name or get_discovery_model()
+        self.targeting = dict(targeting) if targeting else {}
         self.discarded_log_file = os.getenv("DISCARDED_LOG_FILE", "discarded_candidates.jsonl")
         self.discarded_candidates: List[Dict[str, Any]] = []
 
@@ -131,9 +133,16 @@ class ResearchDiscoveryAdapter(DiscoveryAdapter):
             except Exception as e:
                 logger.error(f"Failed to write to discarded log file {self.discarded_log_file}: {e}")
 
-    def build_search_prompt(self, limit: int = 10, company_size: str = "any") -> str:
+    def build_search_prompt(
+        self,
+        limit: int = 10,
+        company_size: str = "any",
+        targeting: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Builds structured prompt instructing Gemini to use Google Search tool."""
-        size_filter = (company_size or "any").lower().strip()
+        active_targeting = {**self.targeting, **(targeting or {})}
+        effective_size = company_size or active_targeting.get("company_size", "any")
+        size_filter = (effective_size or "any").lower().strip()
         if size_filter == "small":
             size_instruction = (
                 "Company size requirement: Filter strictly for early-stage startups and small engineering teams "
@@ -149,14 +158,32 @@ class ResearchDiscoveryAdapter(DiscoveryAdapter):
                 "Company size requirement: Startups of any size (early-stage Seed to growth-stage Series B+)."
             )
 
-        criteria_list = "\n".join(f"- {c}" for c in self.TARGET_CRITERIA)
+        industry = active_targeting.get("industry")
+        geography = active_targeting.get("geography") or active_targeting.get("target_geography")
+        techs = active_targeting.get("technologies") or []
+        if isinstance(techs, str):
+            try:
+                techs = json.loads(techs)
+            except Exception:
+                techs = [t.strip() for t in techs.split(",") if t.strip()]
+
+        geo_instruction = ""
+        if geography and geography.lower() not in ["any", "all", "global", "worldwide", "remote", "none", "unstated"]:
+            geo_instruction = f"\nGeographic requirement: Headquartered or operating primarily in {geography}."
+
+        if industry:
+            tech_note = f" Key technologies: {', '.join(techs)}." if techs else ""
+            criteria_str = f"- Industry / Domain: {industry}.{tech_note}"
+        else:
+            criteria_str = "\n".join(f"- {c}" for c in self.TARGET_CRITERIA)
+
         fetch_count = max(limit * 2, 10)
 
         prompt = (
             f"You are an expert technical intelligence agent. Use your Google Search tool to find real, currently operating "
             f"technology startups matching the following technical profile criteria:\n"
-            f"{criteria_list}\n\n"
-            f"{size_instruction}\n\n"
+            f"{criteria_str}\n\n"
+            f"{size_instruction}{geo_instruction}\n\n"
             f"MANDATORY SEARCH GROUNDING INSTRUCTIONS:\n"
             f"1. You MUST use Google Search to identify real, active startups with working public websites. Do NOT invent or hallucinate companies or domain names.\n"
             f"2. Every company MUST have an actual, working web domain.\n"
@@ -195,12 +222,14 @@ class ResearchDiscoveryAdapter(DiscoveryAdapter):
             )
             response = chat.send_message(prompt)
             if response:
-                if hasattr(response, "text") and response.text:
-                    return response.text
-                elif response.candidates and response.candidates[0].content:
+                extracted = extract_llm_text(response)
+                if extracted:
+                    return extracted
+                if response.candidates and response.candidates[0].content:
                     parts = response.candidates[0].content.parts or []
-                    return "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", ""))
-                return str(response)
+                    text_parts = [getattr(p, "text", "") for p in parts if getattr(p, "text", "")]
+                    if text_parts:
+                        return "".join(text_parts).strip()
             return ""
 
         try:
@@ -249,12 +278,17 @@ class ResearchDiscoveryAdapter(DiscoveryAdapter):
         logger.warning(f"Could not parse structured JSON from LLM output: {raw_text[:200]}...")
         return []
 
-    def discover(self, limit: int = 10, company_size: str = "any") -> List[Dict[str, Any]]:
+    def discover(
+        self,
+        limit: int = 10,
+        company_size: str = "any",
+        targeting: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """
         Discovers uncontacted candidate companies matching profile criteria using
         grounded Gemini web search, verifying domain resolution via HTTP HEAD/GET before returning.
         """
-        prompt = self.build_search_prompt(limit=limit, company_size=company_size)
+        prompt = self.build_search_prompt(limit=limit, company_size=company_size, targeting=targeting)
         try:
             raw_output = self._query_gemini(prompt)
         except DailyQuotaExhaustedError:

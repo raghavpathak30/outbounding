@@ -7,8 +7,13 @@ import os
 
 class DiscoveryAdapter(ABC):
     @abstractmethod
-    def discover(self, limit: int = 10, company_size: str = "any") -> List[Dict[str, Any]]:
-        """Discovers targeted companies matching candidate profile with optional size filtering."""
+    def discover(
+        self,
+        limit: int = 10,
+        company_size: str = "any",
+        targeting: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Discovers targeted companies matching candidate profile with optional size and modular campaign targeting."""
         pass
 
 class EnrichmentAdapter(ABC):
@@ -23,10 +28,11 @@ class PersonResearchAdapter(ABC):
         self,
         domain: str,
         company_name: Optional[str] = None,
-        company_context: Optional[Dict[str, Any]] = None
+        company_context: Optional[Dict[str, Any]] = None,
+        target_roles: Optional[List[str]] = None
     ) -> Optional[Dict[str, Any]]:
         """
-        Discovers verified technical leader (Founder, CTO, VP Eng, Head of Eng) for domain.
+        Discovers verified technical leader (Founder, CTO, VP Eng, Head of Eng, or campaign target_roles) for domain.
         Returns dict with keys: first_name, last_name, full_name, role, linkedin_url, source_url, person_confidence.
         Or None if no high-confidence leader verified.
         """
@@ -64,16 +70,16 @@ class AdapterFactory:
     """Factory to instantiate Stub or Live adapters based on environment configuration."""
     
     @staticmethod
-    def get_discovery_adapter() -> DiscoveryAdapter:
+    def get_discovery_adapter(targeting: Optional[Dict[str, Any]] = None) -> DiscoveryAdapter:
         mode = os.getenv("DISCOVERY_MODE", "stub").lower()
         if mode == "live":
             from pipeline.adapters.live import LiveDiscoveryAdapter
-            return LiveDiscoveryAdapter()
+            return LiveDiscoveryAdapter(targeting=targeting)
         elif mode == "research":
             from pipeline.adapters.research import ResearchDiscoveryAdapter
-            return ResearchDiscoveryAdapter()
+            return ResearchDiscoveryAdapter(targeting=targeting)
         from pipeline.adapters.stub import StubDiscoveryAdapter
-        return StubDiscoveryAdapter()
+        return StubDiscoveryAdapter(targeting=targeting)
 
     @staticmethod
     def get_enrichment_adapter() -> EnrichmentAdapter:

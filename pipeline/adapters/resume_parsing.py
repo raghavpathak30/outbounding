@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional
 
 from pypdf import PdfReader
 
+from pipeline.adapters._llm_text import extract_llm_text
 from pipeline.config import (
     DEFAULT_GEMINI_MODEL,
     execute_with_quota_retry,
@@ -217,7 +218,7 @@ class GeminiResumeParsingAdapter(ResumeParsingAdapter):
             return llm.invoke([{"role": "user", "content": prompt}])
 
         response = execute_with_quota_retry(_call_gemini)
-        raw_output = response.content if hasattr(response, "content") else str(response)
+        raw_output = extract_llm_text(response) or ""
 
         # Strip optional markdown code block
         cleaned = raw_output.strip()

@@ -274,11 +274,19 @@ class JobManager:
 
             if not leader_data:
                 logger.info(f"[JobManager] Invoking Person Research for {company.domain}")
+                target_roles = []
+                if campaign.target_roles_json:
+                    try:
+                        target_roles = json.loads(campaign.target_roles_json)
+                    except Exception:
+                        target_roles = []
+
                 person_adapter = AdapterFactory.get_person_research_adapter()
                 leader_data = person_adapter.find_leader(
                     domain=company.domain,
                     company_name=company.company_name,
-                    company_context=company_context
+                    company_context=company_context,
+                    target_roles=target_roles
                 )
 
                 person_conf = float(leader_data.get("person_confidence") or 0.0) if leader_data else 0.0

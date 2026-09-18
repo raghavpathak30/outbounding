@@ -337,11 +337,48 @@ class DiscoveryService:
         if not campaign:
             raise ValueError(f"Campaign '{campaign_id}' not found or access unauthorized.")
 
-        active_adapter = adapter or AdapterFactory.get_discovery_adapter()
-        raw_candidates = active_adapter.discover(
-            limit=limit * 2,  # Request larger pool to account for deduplication
-            company_size=campaign.company_size
-        )
+        # Extract modular per-campaign targeting payload from stored campaign model
+        target_roles = []
+        if campaign.target_roles_json:
+            try:
+                target_roles = json.loads(campaign.target_roles_json)
+            except Exception:
+                target_roles = []
+
+        technologies = []
+        if campaign.technologies_json:
+            try:
+                technologies = json.loads(campaign.technologies_json)
+            except Exception:
+                technologies = []
+
+        campaign_targeting = {
+            "industry": campaign.industry,
+            "geography": campaign.target_geography,
+            "company_size": campaign.company_size,
+            "company_stage": campaign.company_stage,
+            "target_roles": target_roles,
+            "technologies": technologies,
+            "employment_type": getattr(campaign, "employment_type", "full_time"),
+            "remote_preference": getattr(campaign, "remote_preference", "any"),
+        }
+
+        active_adapter = adapter or AdapterFactory.get_discovery_adapter(targeting=campaign_targeting)
+        try:
+            raw_candidates = active_adapter.discover(
+                limit=limit * 2,  # Request larger pool to account for deduplication
+                company_size=campaign.company_size,
+                targeting=campaign_targeting
+            )
+        except TypeError as e:
+            logger.warning(
+                f"Discovery adapter '{active_adapter.__class__.__name__}' rejected 'targeting' parameter ({e}). "
+                f"Falling back to discover(limit, company_size) without campaign targeting."
+            )
+            raw_candidates = active_adapter.discover(
+                limit=limit * 2,
+                company_size=campaign.company_size
+            )
 
         # Existing domains already attached to this campaign
         existing_campaign_domains = set(

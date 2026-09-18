@@ -1078,10 +1078,14 @@ def test_apollo_org_search_mock(monkeypatch):
         "pagination": {"page": 1, "per_page": 10, "total_entries": 2}
     }
 
-    # (a) Successful search with size='small'
+    # (a) Successful search with size='small' and modular targeting
     with patch("requests.post") as mock_post:
         mock_post.return_value = MagicMock(status_code=200, json=lambda: mock_apollo_response)
-        candidates = adapter.discover(limit=5, company_size="small")
+        candidates = adapter.discover(
+            limit=5,
+            company_size="small",
+            targeting={"industry": "applied cryptography, cybersecurity", "geography": "United States"}
+        )
 
         assert len(candidates) == 2
         cand1 = candidates[0]
@@ -1100,6 +1104,7 @@ def test_apollo_org_search_mock(monkeypatch):
         assert payload["organization_num_employees_ranges"] == ["1,10"]
         assert "applied cryptography" in payload["q_organization_keyword_tags"]
         assert "cybersecurity" in payload["q_organization_keyword_tags"]
+        assert payload["organization_locations"] == ["United States"]
 
     # (b) Test size='established' passes correct employee range
     with patch("requests.post") as mock_post:

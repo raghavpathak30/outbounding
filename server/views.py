@@ -13,70 +13,126 @@ Provides responsive, high-density, cybersecurity-themed operator consoles:
 
 SHARED_CSS = """
     :root {
-      --bg-base: #0a0f1d;
-      --card-bg: #111827;
-      --card-border: #1f2937;
-      --card-hover: #1e293b;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.25);
-      --text-main: #f9fafb;
-      --text-muted: #9ca3af;
-      --text-dim: #6b7280;
-      --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.2);
-      --warning: #f59e0b;
-      --warning-glow: rgba(245, 158, 11, 0.2);
-      --purple: #8b5cf6;
-      --purple-glow: rgba(139, 92, 246, 0.2);
-      --cyan: #06b6d4;
-      --danger: #ef4444;
-      --danger-glow: rgba(239, 68, 68, 0.2);
+      /* Surfaces — dark gray, never pure black */
+      --bg-base:      #0F1419;   /* page background */
+      --bg-surface:   #171C22;   /* panels */
+      --bg-elevated:  #1E252D;   /* cards, modals */
+      --border:       #2A323C;   /* decorative dividers only */
+      --border-strong:#484F58;   /* perceivable control outlines (3:1) */
+
+      /* Text */
+      --text-primary: #E6EDF3;   /* 14.5:1 on surface */
+      --text-muted:   #9AA7B4;   /* 7.0:1 on surface */
+
+      /* Semantic status — as text/icons on dark surfaces */
+      --info:    #4C8DF5;   /* 5.3:1 */
+      --success: #3FB950;   /* 6.7:1 */
+      --warning: #D29922;   /* 6.8:1 */
+      --danger:  #F85149;   /* 5.1:1 */
+      --accent:  #2DB7A3;   /* 6.9:1 */
+
+      /* Accessible semantic colors for existing UI tags & badges */
+      --purple:  #BC8CFF;   /* 8.5:1 on surface */
+      --cyan:    #39C5CF;   /* 8.8:1 on surface */
+
+      /* Backward compatibility aliases */
+      --card-bg:      var(--bg-surface);
+      --card-border:  var(--border);
+      --card-hover:   var(--bg-elevated);
+      --text-main:    var(--text-primary);
+      --text-dim:     var(--text-muted);
+      --accent-glow:  rgba(45, 183, 163, 0.25);
+      --success-glow: rgba(63, 185, 80, 0.2);
+      --warning-glow: rgba(210, 153, 34, 0.2);
+      --purple-glow:  rgba(188, 140, 255, 0.2);
+      --danger-glow:  rgba(248, 81, 73, 0.2);
+
+      /* Button FILLS — darker than the text colors above, for white text at 4.6:1.
+         Do not use --info or --danger as button backgrounds with white text;
+         that combination fails contrast at 3.3:1. */
+      --btn-primary-bg: #1F6FEB;  /* white text = 4.6:1 */
+      --btn-danger-bg:  #DA3633;  /* white text = 4.6:1 */
+      --btn-success-bg: #238636;  /* white text = 4.6:1 */
+      --btn-warning-bg: #9E6A03;  /* white text = 4.5:1 */
+      --btn-purple-bg:  #6E40C9;  /* white text = 5.2:1 */
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-base);
-      color: var(--text-main);
+      color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
-    a { color: var(--accent); text-decoration: none; }
+    a { color: var(--info); text-decoration: none; }
     a:hover { text-decoration: underline; }
+
+    /* Sticky container for navbar + persistent sending mode banner */
+    .navbar-container {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+    }
     .navbar {
-      background: rgba(17, 24, 39, 0.92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--card-border);
+      background: var(--bg-surface);
       padding: 0.85rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
     }
     .brand { display: flex; align-items: center; gap: 1.5rem; }
-    .brand-logo { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .brand-logo { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.15rem; color: var(--text-primary); text-decoration: none; }
     .brand-icon { font-size: 1.3rem; }
     .nav-links { display: flex; gap: 1.25rem; }
     .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: color 0.2s; padding: 0.35rem 0.6rem; border-radius: 6px; }
-    .nav-link:hover { color: #fff; text-decoration: none; }
-    .nav-link.active { color: #60a5fa; background: rgba(59, 130, 246, 0.12); font-weight: 600; }
+    .nav-link:hover { color: var(--text-primary); text-decoration: none; }
+    .nav-link.active { color: var(--info); background: rgba(76, 141, 245, 0.12); font-weight: 600; }
     .user-section { display: flex; align-items: center; gap: 1rem; }
     .user-badge { font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
-    .user-email { color: #60a5fa; font-weight: 600; }
+    .user-email { color: var(--info); font-weight: 600; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block; }
     .btn-logout {
       background: transparent;
-      border: 1px solid #374151;
+      border: 1px solid var(--border-strong);
       color: var(--text-muted);
       border-radius: 6px;
       padding: 0.4rem 0.8rem;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      min-height: 32px;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .btn-logout:hover { color: #f87171; border-color: #ef4444; }
+    .btn-logout:hover { color: var(--danger); border-color: var(--btn-danger-bg); }
+
+    /* Persistent Sending Mode Banner */
+    .sending-mode-banner {
+      padding: 0.5rem 2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      background: var(--bg-elevated);
+      border-left: 3px solid var(--info);
+      color: var(--text-primary);
+      border-top: 1px solid var(--border);
+    }
+    .sending-mode-banner.mode-live {
+      background: #3D2E0A;
+      border-left: 3px solid var(--warning);
+      color: var(--text-primary);
+    }
+    .sending-mode-banner .banner-inner {
+      max-width: 1360px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
     .main-content {
       flex: 1;
       max-width: 1360px;
@@ -92,14 +148,18 @@ SHARED_CSS = """
       flex-wrap: wrap;
       gap: 1rem;
     }
-    .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.75rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.75rem; color: var(--text-primary); }
     .page-subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: 0.25rem; }
+
+    /* Button sizing and focus states */
     .btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.5rem;
-      padding: 0.55rem 1.1rem;
-      font-size: 0.88rem;
+      min-height: 44px;          /* WCAG 2.5.5 enhanced target */
+      padding: 0.65rem 1.25rem;
+      font-size: 1rem;
       font-weight: 600;
       border-radius: 8px;
       border: none;
@@ -108,28 +168,48 @@ SHARED_CSS = """
       text-decoration: none;
     }
     .btn:hover { opacity: 0.92; text-decoration: none; }
-    .btn-primary { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; box-shadow: 0 0 15px var(--accent-glow); }
-    .btn-success { background: linear-gradient(135deg, #059669, #10b981); color: #fff; box-shadow: 0 0 15px var(--success-glow); }
-    .btn-warning { background: linear-gradient(135deg, #d97706, #f59e0b); color: #fff; }
-    .btn-danger { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; box-shadow: 0 0 15px var(--danger-glow); }
-    .btn-purple { background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: #fff; box-shadow: 0 0 15px var(--purple-glow); }
-    .btn-secondary { background: #1f2937; color: var(--text-main); border: 1px solid #374151; }
-    .btn-secondary:hover { background: #374151; }
-    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .btn-sm {
+      min-height: 32px;          /* never below 24px (WCAG 2.5.8 minimum) */
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+    }
+
+    /* Visible focus on EVERY interactive element — required for keyboard use */
+    .btn:focus-visible,
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    summary:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
+    }
+
+    .btn-primary { background: var(--btn-primary-bg); color: #ffffff; }
+    .btn-success { background: var(--btn-success-bg); color: #ffffff; }
+    .btn-warning { background: var(--btn-warning-bg); color: #ffffff; }
+    .btn-danger { background: var(--btn-danger-bg); color: #ffffff; }
+    .btn-purple { background: var(--btn-purple-bg); color: #ffffff; }
+    .btn-secondary { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong); }
+    .btn-secondary:hover { background: var(--bg-surface); }
+
     .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 1.5rem;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
       margin-bottom: 1.5rem;
     }
     .card-title { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
-    .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid var(--card-border); background: #0c111e; }
+    .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface); }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
-    th { background: #131b2e; padding: 0.85rem 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--card-border); }
-    td { padding: 0.85rem 1rem; border-bottom: 1px solid #1a2333; color: var(--text-main); vertical-align: middle; }
-    tr:hover td { background: rgba(30, 41, 59, 0.5); }
+    th { background: var(--bg-elevated); padding: 0.85rem 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); color: var(--text-primary); vertical-align: middle; }
+    tr:hover td { background: var(--bg-elevated); }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -140,13 +220,50 @@ SHARED_CSS = """
       font-weight: 600;
       white-space: nowrap;
     }
-    .badge-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-    .badge-purple { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
-    .badge-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
-    .badge-red { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .badge-gray { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+    .badge-blue { background: rgba(76, 141, 245, 0.15); color: var(--info); border: 1px solid rgba(76, 141, 245, 0.3); }
+    .badge-green { background: rgba(63, 185, 80, 0.15); color: var(--success); border: 1px solid rgba(63, 185, 80, 0.3); }
+    .badge-amber { background: rgba(210, 153, 34, 0.15); color: var(--warning); border: 1px solid rgba(210, 153, 34, 0.3); }
+    .badge-purple { background: rgba(188, 140, 255, 0.15); color: var(--purple); border: 1px solid rgba(188, 140, 255, 0.3); }
+    .badge-cyan { background: rgba(57, 197, 207, 0.15); color: var(--cyan); border: 1px solid rgba(57, 197, 207, 0.3); }
+    .badge-red { background: rgba(248, 81, 73, 0.15); color: var(--danger); border: 1px solid rgba(248, 81, 73, 0.3); }
+    .badge-gray { background: rgba(154, 167, 180, 0.15); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* Match score visual bar */
+    .score { display: inline-flex; align-items: center; gap: 0.5rem; }
+    .score-track { width: 64px; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .score-fill  { height: 100%; border-radius: 3px; }
+    .score-num   { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+    /* Signal chips and collapsible details */
+    .chip {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      margin: 0.15rem 0.2rem 0.15rem 0;
+      font-size: 0.78rem;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .chip-more {
+      background: var(--bg-surface);
+      border-color: var(--border-strong);
+      color: var(--info);
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+    }
+    details.chips-details {
+      display: inline-block;
+      vertical-align: middle;
+    }
+    details.chips-details summary::-webkit-details-marker {
+      display: none;
+    }
+    details.chips-details summary {
+      list-style: none;
+    }
+
     .toast {
       position: fixed;
       bottom: 2rem;
@@ -160,12 +277,12 @@ SHARED_CSS = """
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
       animation: slideUp 0.3s ease;
     }
-    .toast-success { background: #065f46; border: 1px solid #10b981; color: #ecfdf5; }
-    .toast-error { background: #7f1d1d; border: 1px solid #ef4444; color: #fef2f2; }
+    .toast-success { background: #0F3319; border: 1px solid var(--success); color: var(--text-primary); }
+    .toast-error { background: #3C1210; border: 1px solid var(--danger); color: var(--text-primary); }
     .modal-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(15, 20, 25, 0.82);
       backdrop-filter: blur(4px);
       display: none;
       align-items: center;
@@ -174,8 +291,8 @@ SHARED_CSS = """
       padding: 1.5rem;
     }
     .modal {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
       border-radius: 14px;
       width: 100%;
       max-width: 620px;
@@ -185,24 +302,24 @@ SHARED_CSS = """
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
       animation: zoomIn 0.2s ease;
     }
-    .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary); }
     .modal-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; }
     .form-group { margin-bottom: 1.25rem; }
     label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.4rem; }
-    input[type="text"], input[type="email"], input[type="number"], select, textarea {
+    input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
       width: 100%;
-      background: #0b0f19;
-      border: 1px solid #374151;
+      background: var(--bg-base);
+      border: 1px solid var(--border-strong);
       border-radius: 8px;
       padding: 0.65rem 0.9rem;
-      color: var(--text-main);
+      color: var(--text-primary);
       font-size: 0.9rem;
       font-family: inherit;
     }
     input:focus, select:focus, textarea:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+      border-color: var(--info);
+      box-shadow: 0 0 0 3px rgba(76, 141, 245, 0.25);
     }
     .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.75rem; }
     @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -210,26 +327,34 @@ SHARED_CSS = """
 """
 
 NAVBAR_TEMPLATE = """
-  <header class="navbar">
-    <div class="brand">
-      <a href="/dashboard" class="brand-logo">
-        <span class="brand-icon">⚡</span>
-        <span>Outbound Pipeline</span>
-      </a>
-      <nav class="nav-links">
-        <a href="/dashboard" class="nav-link {active_dashboard}">Dashboard</a>
-        <a href="/campaigns" class="nav-link {active_campaigns}">Campaigns</a>
-        <a href="/review" class="nav-link {active_review}">Review Cockpit</a>
-        <a href="/deliveries" class="nav-link {active_deliveries}">Deliveries</a>
-        <a href="/profile" class="nav-link {active_profile}">Profile & Resumes</a>
-        <a href="/settings" class="nav-link {active_settings}">Settings</a>
-      </nav>
+  <div class="navbar-container">
+    <header class="navbar">
+      <div class="brand">
+        <a href="/dashboard" class="brand-logo">
+          <span class="brand-icon">⚡</span>
+          <span>Outbound Pipeline</span>
+        </a>
+        <nav class="nav-links">
+          <a href="/dashboard" class="nav-link {active_dashboard}">Dashboard</a>
+          <a href="/campaigns" class="nav-link {active_campaigns}">Campaigns</a>
+          <a href="/review" class="nav-link {active_review}">Review Cockpit</a>
+          <a href="/deliveries" class="nav-link {active_deliveries}">Deliveries</a>
+          <a href="/profile" class="nav-link {active_profile}">Profile & Resumes</a>
+          <a href="/settings" class="nav-link {active_settings}">Settings</a>
+        </nav>
+      </div>
+      <div class="user-section">
+        <span class="user-badge" id="nav-user-badge"><span class="status-dot"></span> <span id="nav-user-email">Operator</span></span>
+        <button class="btn-logout btn-sm" id="logout-btn">Sign Out</button>
+      </div>
+    </header>
+    <div id="sending-mode-banner" class="sending-mode-banner mode-test" role="status" aria-live="polite">
+      <div class="banner-inner">
+        <span id="sending-mode-label">🧪 &nbsp;TEST MODE — no real emails are sent.</span>
+        <span id="sending-mode-caps">0 of 10 sends used today</span>
+      </div>
     </div>
-    <div class="user-section">
-      <span class="user-badge" id="nav-user-badge"><span class="status-dot"></span> <span id="nav-user-email">Operator</span></span>
-      <button class="btn-logout" id="logout-btn">Sign Out</button>
-    </div>
-  </header>
+  </div>
 """
 
 SHARED_JS = """
@@ -252,6 +377,142 @@ SHARED_JS = """
       .replace(/'/g, "&#039;");
   }
 
+  function renderScoreBar(rawScore) {
+    const score = Math.max(0, Math.min(100, Math.round(Number(rawScore) || 0)));
+    let fill = 'var(--danger)';
+    if (score >= 70) fill = 'var(--success)';
+    else if (score >= 50) fill = 'var(--warning)';
+
+    return `<div class="score" role="img" aria-label="Match score ${score} out of 100">` +
+      `<div class="score-track"><div class="score-fill" style="width:${score}%; background:${fill};"></div></div>` +
+      `<span class="score-num">${score}</span>` +
+    `</div>`;
+  }
+
+  function renderStatusBadge(status) {
+    const s = String(status || '').toLowerCase().trim();
+    switch (s) {
+      case 'pending':
+      case 'waiting_for_review':
+        return '<span class="badge badge-amber"><span aria-hidden="true">◷</span> Needs review</span>';
+      case 'approved':
+        return '<span class="badge badge-green"><span aria-hidden="true">✓</span> Approved</span>';
+      case 'sent':
+        return '<span class="badge badge-green"><span aria-hidden="true">✓</span> Sent</span>';
+      case 'rejected':
+        return '<span class="badge badge-red"><span aria-hidden="true">✕</span> Rejected</span>';
+      case 'failed':
+      case 'error':
+        return '<span class="badge badge-red"><span aria-hidden="true">⚠</span> Error</span>';
+      case 'researching':
+      case 'running':
+      case 'queued':
+      case 'in_progress':
+      case 'processing':
+        return '<span class="badge badge-blue"><span aria-hidden="true">◌</span> In progress</span>';
+      case 'waiting_for_delivery':
+        return '<span class="badge badge-purple"><span aria-hidden="true">✓</span> Ready for Delivery</span>';
+      case 'staged':
+        return '<span class="badge badge-cyan"><span aria-hidden="true">🛡</span> Staged</span>';
+      case 'selected':
+        return '<span class="badge badge-blue"><span aria-hidden="true">✓</span> Selected</span>';
+      case 'discovered':
+        return '<span class="badge badge-gray"><span aria-hidden="true">◌</span> Discovered</span>';
+      case 'contacted':
+        return '<span class="badge badge-green"><span aria-hidden="true">✓</span> Contacted</span>';
+      case 'blocked_safety':
+        return '<span class="badge badge-red"><span aria-hidden="true">⚠</span> Blocked Safety</span>';
+      case 'valid':
+        return '<span class="badge badge-green"><span aria-hidden="true">✓</span> Valid</span>';
+      case 'invalid':
+        return '<span class="badge badge-red"><span aria-hidden="true">✕</span> Invalid</span>';
+      case 'active':
+        return '<span class="badge badge-green"><span aria-hidden="true">●</span> Active</span>';
+      case 'draft':
+        return '<span class="badge badge-blue"><span aria-hidden="true">◌</span> Draft</span>';
+      case 'completed':
+        return '<span class="badge badge-green"><span aria-hidden="true">✓</span> Completed</span>';
+      case 'passed':
+        return '<span class="badge badge-green"><span aria-hidden="true">✓</span> Passed</span>';
+      case 'blocked':
+        return '<span class="badge badge-red"><span aria-hidden="true">✕</span> Blocked</span>';
+      case 'test':
+        return '<span class="badge badge-purple"><span aria-hidden="true">🧪</span> Test</span>';
+      case 'live':
+        return '<span class="badge badge-amber"><span aria-hidden="true">⚡</span> Live</span>';
+      case 'healthy':
+        return '<span class="badge badge-green"><span aria-hidden="true">●</span> Healthy</span>';
+      case 'skipped':
+        return '<span class="badge badge-gray"><span aria-hidden="true">↷</span> Skipped</span>';
+      default:
+        return `<span class="badge badge-gray">${escapeHtml(status || '-')}</span>`;
+    }
+  }
+
+  function renderSignalChips(signals) {
+    if (!signals || !Array.isArray(signals) || signals.length === 0) {
+      return '<span style="color:var(--text-muted);font-size:0.75rem;">-</span>';
+    }
+    const visible = signals.slice(0, 4);
+    const extra = signals.slice(4);
+    let html = visible.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('');
+    if (extra.length > 0) {
+      const extraHtml = extra.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('');
+      html += `<details class="chips-details">` +
+        `<summary class="chip chip-more">+${extra.length} more</summary>` +
+        `<span>${extraHtml}</span>` +
+      `</details>`;
+    }
+    return html;
+  }
+
+  async function updateSendingModeBanner(cachedStats = null) {
+    const bannerEl = document.getElementById('sending-mode-banner');
+    if (!bannerEl) return;
+    try {
+      let healthData = null;
+      let statsData = cachedStats;
+      const promises = [
+        fetch('/api/v1/health').then(r => r.ok ? r.json() : null).catch(() => null)
+      ];
+      if (!statsData) {
+        promises.push(fetch('/api/v1/dashboard/stats').then(r => r.ok ? r.json() : null).catch(() => null));
+      }
+      const results = await Promise.all(promises);
+      healthData = results[0];
+      if (!statsData && results.length > 1) {
+        statsData = results[1];
+      }
+
+      const deliveryMode = (healthData && healthData.delivery_mode) ? healthData.delivery_mode.toLowerCase() : 'stage';
+      const isDryRun = healthData ? Boolean(healthData.dry_run) : true;
+      const isLive = (deliveryMode === 'live' && !isDryRun);
+
+      let dayUsed = 0;
+      let dayMax = 10;
+      if (statsData && statsData.volume_caps) {
+        dayUsed = statsData.volume_caps.sends_today ?? 0;
+        dayMax = statsData.volume_caps.max_day ?? 10;
+      }
+
+      const modeLabelEl = document.getElementById('sending-mode-label');
+      const capsEl = document.getElementById('sending-mode-caps');
+
+      if (isLive) {
+        bannerEl.className = 'sending-mode-banner mode-live';
+        if (modeLabelEl) modeLabelEl.textContent = '⚡  LIVE MODE — emails go to real people.';
+      } else {
+        bannerEl.className = 'sending-mode-banner mode-test';
+        if (modeLabelEl) modeLabelEl.textContent = '🧪  TEST MODE — no real emails are sent.';
+      }
+      if (capsEl) {
+        capsEl.textContent = `${dayUsed} of ${dayMax} sends used today`;
+      }
+    } catch (e) {
+      console.warn('Sending mode banner update skipped:', e);
+    }
+  }
+
   async function checkAuth() {
     try {
       const res = await fetch('/api/v1/auth/me');
@@ -270,6 +531,7 @@ SHARED_JS = """
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    updateSendingModeBanner();
     document.getElementById('logout-btn')?.addEventListener('click', async () => {
       try { await fetch('/api/v1/auth/logout', { method: 'POST' }); }
       finally { window.location.href = '/login'; }
@@ -293,21 +555,26 @@ def get_login_html() -> str:
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-base: #090d16;
-      --card-bg: #111827;
-      --card-border: #1f2937;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.4);
-      --text-main: #f9fafb;
-      --text-muted: #9ca3af;
-      --danger: #ef4444;
-      --danger-bg: rgba(239, 68, 68, 0.15);
+      --bg-base:      #0F1419;
+      --bg-surface:   #171C22;
+      --bg-elevated:  #1E252D;
+      --border:       #2A323C;
+      --border-strong:#484F58;
+      --text-primary: #E6EDF3;
+      --text-muted:   #9AA7B4;
+      --info:         #4C8DF5;
+      --danger:       #F85149;
+      --btn-primary-bg: #1F6FEB;
+      --btn-danger-bg:  #DA3633;
+      --card-bg:      var(--bg-surface);
+      --card-border:  var(--border);
+      --text-main:    var(--text-primary);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, var(--bg-base) 70%);
-      color: var(--text-main);
+      background: radial-gradient(circle at 50% 20%, var(--bg-surface) 0%, var(--bg-base) 70%);
+      color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -317,36 +584,37 @@ def get_login_html() -> str:
     .login-container {
       width: 100%;
       max-width: 420px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 2.5rem;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px var(--accent-glow);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(31, 111, 235, 0.2);
     }
     .header { text-align: center; margin-bottom: 2rem; }
-    .header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    .header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; color: var(--text-primary); }
     .header p { color: var(--text-muted); font-size: 0.88rem; }
     .form-group { margin-bottom: 1.25rem; }
     label { display: block; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem; }
     input[type="email"], input[type="password"] {
       width: 100%;
-      background: #0b0f19;
-      border: 1px solid #374151;
+      min-height: 44px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-strong);
       border-radius: 8px;
       padding: 0.75rem 1rem;
-      color: var(--text-main);
+      color: var(--text-primary);
       font-size: 0.95rem;
       transition: all 0.2s ease;
     }
-    input[type="email"]:focus, input[type="password"]:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+    input[type="email"]:focus-visible, input[type="password"]:focus-visible, .btn-submit:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
     }
     .btn-submit {
       width: 100%;
-      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-      color: #fff;
+      min-height: 44px;
+      background: var(--btn-primary-bg);
+      color: #ffffff;
       border: none;
       border-radius: 8px;
       padding: 0.85rem;
@@ -360,27 +628,31 @@ def get_login_html() -> str:
     .btn-submit:active { transform: scale(0.98); }
     .alert-error {
       display: none;
-      background: var(--danger-bg);
+      background: #3C1210;
       border: 1px solid var(--danger);
-      color: #fca5a5;
+      color: var(--text-primary);
       padding: 0.75rem 1rem;
       border-radius: 8px;
       font-size: 0.85rem;
       margin-bottom: 1.25rem;
     }
     .badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
       padding: 0.25rem 0.6rem;
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
+      background: rgba(76, 141, 245, 0.15);
+      color: var(--info);
+      border: 1px solid rgba(76, 141, 245, 0.3);
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
       margin-bottom: 0.75rem;
     }
     code {
-      background: #1e293b;
-      color: #93c5fd;
+      background: var(--bg-elevated);
+      color: var(--info);
+      border: 1px solid var(--border);
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
       font-size: 0.76rem;
@@ -409,7 +681,7 @@ def get_login_html() -> str:
       </div>
       <button type="submit" class="btn-submit" id="submit-btn">Sign In</button>
     </form>
-    <div class="bootstrap-hint" style="margin-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--card-border); padding-top: 1rem; line-height: 1.45;">
+    <div class="bootstrap-hint" style="margin-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 1rem; line-height: 1.45;">
       First deployment? Set <code>BOOTSTRAP_ADMIN_EMAIL</code> and <code>BOOTSTRAP_ADMIN_PASSWORD</code> in <code>.env</code> to initialize operator access.
     </div>
   </div>
@@ -485,8 +757,8 @@ def get_dashboard_html() -> str:
       margin-bottom: 2rem;
     }}
     .metric-card {{
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 1.25rem;
       display: flex;
@@ -495,20 +767,20 @@ def get_dashboard_html() -> str:
     }}
     .metric-label {{ font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }}
     .metric-value {{ font-size: 2rem; font-weight: 700; margin: 0.5rem 0 0.25rem 0; font-family: 'JetBrains Mono', monospace; }}
-    .metric-card.attention-amber {{ border-color: rgba(245, 158, 11, 0.4); background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--card-bg) 100%); }}
-    .metric-card.attention-purple {{ border-color: rgba(139, 92, 246, 0.4); background: linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, var(--card-bg) 100%); }}
-    .metric-card.attention-red {{ border-color: rgba(239, 68, 68, 0.4); background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, var(--card-bg) 100%); }}
+    .metric-card.attention-amber {{ border-color: rgba(210, 153, 34, 0.4); background: linear-gradient(180deg, rgba(210, 153, 34, 0.08) 0%, var(--bg-surface) 100%); }}
+    .metric-card.attention-purple {{ border-color: rgba(188, 140, 255, 0.4); background: linear-gradient(180deg, rgba(188, 140, 255, 0.08) 0%, var(--bg-surface) 100%); }}
+    .metric-card.attention-red {{ border-color: rgba(248, 81, 73, 0.4); background: linear-gradient(180deg, rgba(248, 81, 73, 0.08) 0%, var(--bg-surface) 100%); }}
     .gauges-grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 1.5rem;
       margin-bottom: 2rem;
     }}
-    .gauge-bar-bg {{ background: #1f2937; height: 8px; border-radius: 9999px; overflow: hidden; margin: 0.75rem 0; }}
+    .gauge-bar-bg {{ background: var(--border); height: 8px; border-radius: 9999px; overflow: hidden; margin: 0.75rem 0; }}
     .gauge-fill {{ height: 100%; border-radius: 9999px; transition: width 0.5s ease; }}
-    .attention-tabs {{ display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; }}
-    .tab-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; border-radius: 6px; }}
-    .tab-btn.active {{ color: #60a5fa; background: rgba(59, 130, 246, 0.12); }}
+    .attention-tabs {{ display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }}
+    .tab-btn {{ background: transparent; border: none; color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; border-radius: 6px; min-height: 36px; }}
+    .tab-btn.active {{ color: var(--info); background: rgba(76, 141, 245, 0.12); }}
     .attention-table td {{ font-size: 0.85rem; }}
     .empty-state {{ padding: 2.5rem; text-align: center; color: var(--text-muted); font-size: 0.9rem; }}
   </style>
@@ -534,47 +806,47 @@ def get_dashboard_html() -> str:
       <div class="metric-card">
         <span class="metric-label">Active Campaigns</span>
         <div class="metric-value" id="stat-campaigns">-</div>
-        <span style="font-size:0.75rem; color:var(--text-dim)">Target outreach</span>
+        <span style="font-size:0.75rem; color:var(--text-muted)">Target outreach</span>
       </div>
       <div class="metric-card">
         <span class="metric-label">Discovered</span>
         <div class="metric-value" id="stat-discovered">-</div>
-        <span style="font-size:0.75rem; color:var(--text-dim)">Candidate pool</span>
+        <span style="font-size:0.75rem; color:var(--text-muted)">Candidate pool</span>
       </div>
       <div class="metric-card">
         <span class="metric-label">Selected</span>
         <div class="metric-value" id="stat-selected">-</div>
-        <span style="font-size:0.75rem; color:var(--text-dim)">Ready/Enqueued</span>
+        <span style="font-size:0.75rem; color:var(--text-muted)">Ready/Enqueued</span>
       </div>
       <div class="metric-card">
         <span class="metric-label">Processing</span>
         <div class="metric-value" id="stat-processing">-</div>
-        <span style="font-size:0.75rem; color:var(--text-dim)">Queued & running</span>
+        <span style="font-size:0.75rem; color:var(--text-muted)">Queued & running</span>
       </div>
       <div class="metric-card attention-amber">
-        <span class="metric-label" style="color:#fbbf24">Waiting Review</span>
-        <div class="metric-value" style="color:#fbbf24" id="stat-waiting-review">-</div>
-        <span style="font-size:0.75rem; color:#f59e0b">Human action required</span>
+        <span class="metric-label" style="color:var(--warning)">Waiting Review</span>
+        <div class="metric-value" style="color:var(--warning)" id="stat-waiting-review">-</div>
+        <span style="font-size:0.75rem; color:var(--warning)">Human action required</span>
       </div>
       <div class="metric-card attention-purple">
-        <span class="metric-label" style="color:#c084fc">Waiting Delivery</span>
-        <div class="metric-value" style="color:#c084fc" id="stat-waiting-delivery">-</div>
-        <span style="font-size:0.75rem; color:#a855f7">Approved for dispatch</span>
+        <span class="metric-label" style="color:var(--purple)">Waiting Delivery</span>
+        <div class="metric-value" style="color:var(--purple)" id="stat-waiting-delivery">-</div>
+        <span style="font-size:0.75rem; color:var(--purple)">Approved for dispatch</span>
       </div>
       <div class="metric-card">
         <span class="metric-label">Sent</span>
-        <div class="metric-value" style="color:#34d399" id="stat-sent">-</div>
-        <span style="font-size:0.75rem; color:var(--text-dim)">Live dispatches</span>
+        <div class="metric-value" style="color:var(--success)" id="stat-sent">-</div>
+        <span style="font-size:0.75rem; color:var(--text-muted)">Live dispatches</span>
       </div>
       <div class="metric-card">
         <span class="metric-label">Staged</span>
-        <div class="metric-value" style="color:#22d3ee" id="stat-staged">-</div>
-        <span style="font-size:0.75rem; color:var(--text-dim)">Dry-run safe</span>
+        <div class="metric-value" style="color:var(--cyan)" id="stat-staged">-</div>
+        <span style="font-size:0.75rem; color:var(--text-muted)">Dry-run safe</span>
       </div>
       <div class="metric-card attention-red">
-        <span class="metric-label" style="color:#fca5a5">Failed Runs</span>
-        <div class="metric-value" style="color:#fca5a5" id="stat-failed">-</div>
-        <span style="font-size:0.75rem; color:#ef4444">Needs audit</span>
+        <span class="metric-label" style="color:var(--danger)">Failed Runs</span>
+        <div class="metric-value" style="color:var(--danger)" id="stat-failed">-</div>
+        <span style="font-size:0.75rem; color:var(--danger)">Needs audit</span>
       </div>
     </div>
 
@@ -583,11 +855,11 @@ def get_dashboard_html() -> str:
       <div class="card" style="margin-bottom:0">
         <div class="card-title">
           <span>Daily Volume Cap (Unified)</span>
-          <span class="badge badge-green" id="daily-cap-status">Safe</span>
+          <span class="badge badge-green" id="daily-cap-status"><span aria-hidden="true">✓</span> Safe</span>
         </div>
         <div style="font-size: 1.6rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;" id="daily-cap-text">0 / 10</div>
         <div class="gauge-bar-bg">
-          <div class="gauge-fill" id="daily-cap-bar" style="width: 0%; background: #10b981;"></div>
+          <div class="gauge-fill" id="daily-cap-bar" style="width: 0%; background: var(--success);"></div>
         </div>
         <p style="font-size: 0.8rem; color: var(--text-muted);">Max 10 dispatches per rolling 24h window (CLI + Web unified dedupe).</p>
       </div>
@@ -595,11 +867,11 @@ def get_dashboard_html() -> str:
       <div class="card" style="margin-bottom:0">
         <div class="card-title">
           <span>Weekly Volume Cap (Unified)</span>
-          <span class="badge badge-blue" id="weekly-cap-status">Safe</span>
+          <span class="badge badge-blue" id="weekly-cap-status"><span aria-hidden="true">✓</span> Safe</span>
         </div>
         <div style="font-size: 1.6rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;" id="weekly-cap-text">0 / 50</div>
         <div class="gauge-bar-bg">
-          <div class="gauge-fill" id="weekly-cap-bar" style="width: 0%; background: #3b82f6;"></div>
+          <div class="gauge-fill" id="weekly-cap-bar" style="width: 0%; background: var(--info);"></div>
         </div>
         <p style="font-size: 0.8rem; color: var(--text-muted);">Max 50 dispatches per rolling 7-day window across all channels.</p>
       </div>
@@ -607,7 +879,7 @@ def get_dashboard_html() -> str:
       <div class="card" style="margin-bottom:0">
         <div class="card-title">
           <span>Server Dispatch Mode</span>
-          <span class="badge badge-cyan" id="mode-badge">Dry-Run Staging</span>
+          <span class="badge badge-cyan" id="mode-badge"><span aria-hidden="true">🛡</span> Dry-Run Staging</span>
         </div>
         <div style="font-size: 1.2rem; font-weight: 600; margin-top: 0.35rem;" id="mode-headline">Safe Staging Active</div>
         <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem;">
@@ -620,7 +892,7 @@ def get_dashboard_html() -> str:
     <div class="card" style="margin-top: 2rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2 style="font-size: 1.1rem; font-weight: 700;">Needs Attention Queue</h2>
-        <span class="badge badge-amber" id="attention-total-badge">0 items</span>
+        <span class="badge badge-amber" id="attention-total-badge"><span aria-hidden="true">◷</span> 0 items</span>
       </div>
 
       <div class="attention-tabs">
@@ -697,6 +969,7 @@ def get_dashboard_html() -> str:
         const res = await fetch('/api/v1/dashboard/stats');
         if (!res.ok) throw new Error('Failed to load dashboard statistics');
         statsData = await res.json();
+        updateSendingModeBanner(statsData);
 
         // Populate metric counts
         document.getElementById('stat-campaigns').textContent = statsData.active_campaigns_count;
@@ -721,13 +994,17 @@ def get_dashboard_html() -> str:
         const dayBar = document.getElementById('daily-cap-bar');
         dayBar.style.width = dayPct + '%';
         if (dayPct >= 100) {{
-          dayBar.style.background = '#ef4444';
-          document.getElementById('daily-cap-status').textContent = 'Cap Reached';
+          dayBar.style.background = 'var(--danger)';
+          document.getElementById('daily-cap-status').innerHTML = '<span aria-hidden="true">⚠</span> Cap Reached';
           document.getElementById('daily-cap-status').className = 'badge badge-red';
         }} else if (dayPct >= 80) {{
-          dayBar.style.background = '#f59e0b';
-          document.getElementById('daily-cap-status').textContent = 'Approaching Cap';
+          dayBar.style.background = 'var(--warning)';
+          document.getElementById('daily-cap-status').innerHTML = '<span aria-hidden="true">◷</span> Approaching Cap';
           document.getElementById('daily-cap-status').className = 'badge badge-amber';
+        }} else {{
+          dayBar.style.background = 'var(--success)';
+          document.getElementById('daily-cap-status').innerHTML = '<span aria-hidden="true">✓</span> Safe';
+          document.getElementById('daily-cap-status').className = 'badge badge-green';
         }}
 
         document.getElementById('weekly-cap-text').textContent = `${{weekUsed}} / ${{weekMax}}`;
@@ -735,9 +1012,13 @@ def get_dashboard_html() -> str:
         const weekBar = document.getElementById('weekly-cap-bar');
         weekBar.style.width = weekPct + '%';
         if (weekPct >= 100) {{
-          weekBar.style.background = '#ef4444';
-          document.getElementById('weekly-cap-status').textContent = 'Cap Reached';
+          weekBar.style.background = 'var(--danger)';
+          document.getElementById('weekly-cap-status').innerHTML = '<span aria-hidden="true">⚠</span> Cap Reached';
           document.getElementById('weekly-cap-status').className = 'badge badge-red';
+        }} else {{
+          weekBar.style.background = 'var(--info)';
+          document.getElementById('weekly-cap-status').innerHTML = '<span aria-hidden="true">✓</span> Safe';
+          document.getElementById('weekly-cap-status').className = 'badge badge-blue';
         }}
 
         // Attention Counts
@@ -748,22 +1029,29 @@ def get_dashboard_html() -> str:
         document.getElementById('count-att-review').textContent = revItems.length;
         document.getElementById('count-att-delivery').textContent = delItems.length;
         document.getElementById('count-att-failed').textContent = failItems.length;
-        document.getElementById('attention-total-badge').textContent = (revItems.length + delItems.length + failItems.length) + ' items';
+        document.getElementById('attention-total-badge').innerHTML = `<span aria-hidden="true">◷</span> ${{revItems.length + delItems.length + failItems.length}} items`;
 
         // Render Waiting for Review Table
         const revTbody = document.getElementById('attention-review-tbody');
         if (revItems.length === 0) {{
           revTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No drafts currently waiting for human review.</td></tr>';
         }} else {{
-          revTbody.innerHTML = revItems.map(item => `
-            <tr>
-              <td><strong>${{escapeHtml(item.company_name)}}</strong><br><span style="color:var(--text-muted);font-size:0.75rem">${{escapeHtml(item.domain)}}</span></td>
-              <td>${{escapeHtml(item.campaign_name)}}</td>
-              <td><span class="badge badge-blue">${{escapeHtml(item.detail)}}</span></td>
-              <td style="color:var(--text-muted);font-size:0.8rem">${{item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '-'}}</td>
-              <td><a href="/review" class="btn btn-warning btn-sm">Review Draft</a></td>
-            </tr>
-          `).join('');
+          revTbody.innerHTML = revItems.map(item => {{
+            let detailHtml = `<span class="badge badge-blue">${{escapeHtml(item.detail)}}</span>`;
+            const m = (item.detail || '').match(/Match Score:[ \\t]*([0-9]+)\\/100/i);
+            if (m) {{
+              detailHtml = renderScoreBar(m[1]);
+            }}
+            return `
+              <tr>
+                <td><strong>${{escapeHtml(item.company_name)}}</strong><br><span style="color:var(--text-muted);font-size:0.75rem">${{escapeHtml(item.domain)}}</span></td>
+                <td>${{escapeHtml(item.campaign_name)}}</td>
+                <td>${{detailHtml}}</td>
+                <td style="color:var(--text-muted);font-size:0.8rem">${{item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '-'}}</td>
+                <td><a href="/review" class="btn btn-warning btn-sm">Review Draft</a></td>
+              </tr>
+            `;
+          }}).join('');
         }}
 
         // Render Waiting for Delivery Table
@@ -775,7 +1063,7 @@ def get_dashboard_html() -> str:
             <tr>
               <td><strong>${{escapeHtml(item.company_name)}}</strong><br><span style="color:var(--text-muted);font-size:0.75rem">${{escapeHtml(item.domain)}}</span></td>
               <td>${{escapeHtml(item.campaign_name)}}</td>
-              <td><span class="badge badge-purple">Review Approved</span></td>
+              <td>${{renderStatusBadge('waiting_for_delivery')}}</td>
               <td style="color:var(--text-muted);font-size:0.8rem">${{item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '-'}}</td>
               <td><button onclick="triggerDelivery('${{item.run_id}}', '${{escapeHtml(item.domain)}}')" class="btn btn-purple btn-sm">Deliver Outbound</button></td>
             </tr>
@@ -791,7 +1079,7 @@ def get_dashboard_html() -> str:
             <tr>
               <td><strong>${{escapeHtml(item.company_name)}}</strong><br><span style="color:var(--text-muted);font-size:0.75rem">${{escapeHtml(item.domain)}}</span></td>
               <td>${{escapeHtml(item.campaign_name)}}</td>
-              <td><span class="badge badge-red" title="${{escapeHtml(item.detail)}}">${{escapeHtml((item.detail || '').slice(0, 45))}}...</span></td>
+              <td><span class="badge badge-red" title="${{escapeHtml(item.detail)}}"><span aria-hidden="true">⚠</span> ${{escapeHtml((item.detail || '').slice(0, 45))}}...</span></td>
               <td style="color:var(--text-muted);font-size:0.8rem">${{item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '-'}}</td>
               <td><a href="/campaigns/${{item.campaign_id}}" class="btn btn-secondary btn-sm">Inspect Campaign</a></td>
             </tr>
@@ -980,7 +1268,7 @@ def get_campaigns_html() -> str:
             <tr>
               <td colspan="6" class="empty-state">
                 No campaigns created yet.<br><br>
-                <button class="btn btn-primary btn-sm" onclick="openCreateModal()">Create Your First Campaign</button>
+                <button class="btn btn-primary" onclick="openCreateModal()">Create Your First Campaign</button>
               </td>
             </tr>
           `;
@@ -990,10 +1278,10 @@ def get_campaigns_html() -> str:
         tbody.innerHTML = campaigns.map(c => `
           <tr>
             <td>
-              <a href="/campaigns/${{c.id}}" style="font-weight:700; font-size:0.95rem; color:#fff;">${{escapeHtml(c.name)}}</a>
+              <a href="/campaigns/${{c.id}}" style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">${{escapeHtml(c.name)}}</a>
               <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">${{escapeHtml((c.objective || '').slice(0, 50))}}...</div>
             </td>
-            <td><span class="badge badge-${{c.status === 'active' ? 'green' : 'blue'}}">${{escapeHtml(c.status)}}</span></td>
+            <td>${{renderStatusBadge(c.status)}}</td>
             <td>
               <div>${{escapeHtml(c.target_geography)}}</div>
               <span class="badge badge-gray" style="margin-top:0.25rem">${{escapeHtml(c.industry)}}</span>
@@ -1004,11 +1292,11 @@ def get_campaigns_html() -> str:
             </td>
             <td>
               <div class="stats-pill-group">
-                <span class="badge badge-gray" title="Discovered Companies">${{c.total_companies || 0}} comps</span>
-                <span class="badge badge-blue" title="Selected Companies">${{c.selected_companies || 0}} sel</span>
-                <span class="badge badge-amber" title="Waiting Review">${{c.waiting_for_review_count || 0}} rev</span>
-                <span class="badge badge-purple" title="Waiting Delivery">${{c.waiting_for_delivery_count || 0}} del</span>
-                <span class="badge badge-green" title="Delivered Sent">${{c.sent_count || 0}} sent</span>
+                <span class="badge badge-gray" title="Discovered Companies"><span aria-hidden="true">◌</span> ${{c.total_companies || 0}} comps</span>
+                <span class="badge badge-blue" title="Selected Companies"><span aria-hidden="true">✓</span> ${{c.selected_companies || 0}} sel</span>
+                <span class="badge badge-amber" title="Waiting Review"><span aria-hidden="true">◷</span> ${{c.waiting_for_review_count || 0}} rev</span>
+                <span class="badge badge-purple" title="Waiting Delivery"><span aria-hidden="true">✓</span> ${{c.waiting_for_delivery_count || 0}} del</span>
+                <span class="badge badge-green" title="Delivered Sent"><span aria-hidden="true">✓</span> ${{c.sent_count || 0}} sent</span>
               </div>
             </td>
             <td>
@@ -1118,19 +1406,19 @@ def get_campaign_detail_html() -> str:
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
-      background: #0d1322;
-      border: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 1rem;
       margin-bottom: 1.5rem;
     }}
     .targeting-item-label {{ font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }}
-    .targeting-item-val {{ font-size: 0.88rem; color: #fff; font-weight: 500; margin-top: 0.25rem; }}
+    .targeting-item-val {{ font-size: 0.88rem; color: var(--text-primary); font-weight: 500; margin-top: 0.25rem; }}
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }}
     .filters-group {{ display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }}
     .selection-banner {{
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(76, 141, 245, 0.1);
+      border: 1px solid rgba(76, 141, 245, 0.25);
       border-radius: 8px;
       padding: 0.85rem 1.25rem;
       display: flex;
@@ -1140,8 +1428,9 @@ def get_campaign_detail_html() -> str:
     }}
     .tag-pill {{
       display: inline-block;
-      background: #1e293b;
-      color: #94a3b8;
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
       border-radius: 4px;
       padding: 0.15rem 0.4rem;
       font-size: 0.7rem;
@@ -1151,7 +1440,7 @@ def get_campaign_detail_html() -> str:
       position: relative;
       padding-left: 1.5rem;
       padding-bottom: 1.25rem;
-      border-left: 2px solid #2d3748;
+      border-left: 2px solid var(--border-strong);
     }}
     .timeline-item:last-child {{ border-left: 2px solid transparent; padding-bottom: 0; }}
     .timeline-dot {{
@@ -1161,7 +1450,7 @@ def get_campaign_detail_html() -> str:
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background: var(--accent);
+      background: var(--info);
     }}
   </style>
 </head>
@@ -1177,7 +1466,7 @@ def get_campaign_detail_html() -> str:
       <div>
         <div style="display:flex; align-items:center; gap: 0.75rem;">
           <h1 class="page-title" id="campaign-title">Loading Campaign...</h1>
-          <span class="badge badge-blue" id="campaign-status-badge">draft</span>
+          <span id="campaign-status-container"><span class="badge badge-blue" id="campaign-status-badge"><span aria-hidden="true">◌</span> Draft</span></span>
         </div>
         <p class="page-subtitle" id="campaign-desc">-</p>
       </div>
@@ -1224,8 +1513,8 @@ def get_campaign_detail_html() -> str:
         </p>
       </div>
       <div style="display:flex; gap:0.5rem;">
-        <button class="btn btn-secondary btn-sm" onclick="saveCurrentSelection()">Save Selection</button>
-        <button class="btn btn-success btn-sm" id="enqueue-btn" onclick="enqueueSelectedRuns()">Enqueue Selected Companies &rarr;</button>
+        <button class="btn btn-secondary" onclick="saveCurrentSelection()">Save Selection</button>
+        <button class="btn btn-success" id="enqueue-btn" onclick="enqueueSelectedRuns()">Enqueue Selected Companies &rarr;</button>
       </div>
     </div>
 
@@ -1318,25 +1607,25 @@ def get_campaign_detail_html() -> str:
       </div>
 
       <!-- Stage & Contact Summary -->
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; background:#0b0f19; padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; background:var(--bg-base); border:1px solid var(--border); padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
         <div>
           <span class="targeting-item-label">Verified Contact</span>
-          <div style="font-weight:600; font-size:0.9rem; color:#fff;" id="m-run-person">Searching...</div>
-          <div style="font-size:0.75rem; color:#60a5fa;" id="m-run-email">-</div>
+          <div style="font-weight:600; font-size:0.9rem; color:var(--text-primary);" id="m-run-person">Searching...</div>
+          <div style="font-size:0.75rem; color:var(--info);" id="m-run-email">-</div>
         </div>
         <div>
           <span class="targeting-item-label">Review / Delivery</span>
-          <div style="font-weight:600; font-size:0.9rem; color:#fff;" id="m-run-review">Pending Review</div>
-          <div style="font-size:0.75rem; color:#34d399;" id="m-run-delivery">-</div>
+          <div style="font-weight:600; font-size:0.9rem; color:var(--text-primary);" id="m-run-review">Pending Review</div>
+          <div style="font-size:0.75rem; color:var(--success);" id="m-run-delivery">-</div>
         </div>
       </div>
 
       <!-- Draft Preview if available -->
       <div id="m-run-draft-section" style="margin-bottom:1.5rem; display:none;">
         <span class="targeting-item-label">Generated Outreach Draft</span>
-        <div style="background:#090d16; border:1px solid #374151; border-radius:8px; padding:1rem; margin-top:0.4rem;">
+        <div style="background:var(--bg-base); border:1px solid var(--border); border-radius:8px; padding:1rem; margin-top:0.4rem;">
           <div style="font-weight:600; margin-bottom:0.5rem; font-size:0.85rem;" id="m-draft-subject"></div>
-          <div style="font-size:0.8rem; color:#d1d5db; line-height:1.5; white-space:pre-wrap;" id="m-draft-body"></div>
+          <div style="font-size:0.8rem; color:var(--text-primary); line-height:1.5; white-space:pre-wrap;" id="m-draft-body"></div>
         </div>
       </div>
 
@@ -1369,7 +1658,7 @@ def get_campaign_detail_html() -> str:
         const camp = await res.json();
 
         document.getElementById('campaign-title').textContent = camp.name;
-        document.getElementById('campaign-status-badge').textContent = camp.status;
+        document.getElementById('campaign-status-container').innerHTML = renderStatusBadge(camp.status);
         document.getElementById('campaign-desc').textContent = camp.objective;
         document.getElementById('tg-geo').textContent = camp.target_geography;
         document.getElementById('tg-ind').textContent = camp.industry;
@@ -1411,12 +1700,7 @@ def get_campaign_detail_html() -> str:
         const isContacted = c.selection_status === 'contacted';
         const isChecked = selectedIds.has(c.id);
         const score = c.match_score || 0;
-        let scoreClass = 'badge-gray';
-        if (score >= 80) scoreClass = 'badge-green';
-        else if (score >= 60) scoreClass = 'badge-blue';
-        else if (score > 0) scoreClass = 'badge-amber';
-
-        const signals = (c.technical_signals || []).concat(c.why_match || []).slice(0, 3);
+        const allSignals = (c.technical_signals || []).concat(c.why_match || []);
 
         return `
           <tr style="${{isContacted ? 'opacity:0.6' : ''}}">
@@ -1428,7 +1712,7 @@ def get_campaign_detail_html() -> str:
             </td>
             <td>
               <strong>${{escapeHtml(c.company_name)}}</strong><br>
-              <a href="https://${{encodeURIComponent(c.domain)}}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem; color:#60a5fa;">${{escapeHtml(c.domain)}} &nearr;</a>
+              <a href="https://${{encodeURIComponent(c.domain)}}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem; color:var(--info);">${{escapeHtml(c.domain)}} &nearr;</a>
             </td>
             <td style="font-size:0.8rem">${{escapeHtml(c.location || 'Remote')}}</td>
             <td>
@@ -1436,13 +1720,9 @@ def get_campaign_detail_html() -> str:
               <span style="font-size:0.75rem; color:var(--text-muted)">${{escapeHtml(c.stage || '-')}}</span>
             </td>
             <td style="font-size:0.8rem">${{c.size || '-'}}</td>
-            <td><span class="badge ${{scoreClass}}">${{score}}/100</span></td>
-            <td>${{signals.map(s => `<span class="tag-pill">${{escapeHtml(s)}}</span>`).join('')}}</td>
-            <td>
-              <span class="badge badge-${{isContacted ? 'cyan' : (isChecked ? 'blue' : 'gray')}}">
-                ${{escapeHtml(c.selection_status)}}
-              </span>
-            </td>
+            <td>${{renderScoreBar(score)}}</td>
+            <td>${{renderSignalChips(allSignals)}}</td>
+            <td>${{renderStatusBadge(c.selection_status)}}</td>
           </tr>
         `;
       }}).join('');
@@ -1603,7 +1883,7 @@ def get_campaign_detail_html() -> str:
                 <strong>${{escapeHtml(r.company_name || r.domain)}}</strong><br>
                 <span style="font-size:0.75rem; color:var(--text-muted)">${{escapeHtml(r.domain)}}</span>
               </td>
-              <td><span class="badge ${{badgeClass}}">${{escapeHtml(r.status)}}</span></td>
+              <td>${{renderStatusBadge(r.status)}}</td>
               <td style="font-size:0.8rem">${{escapeHtml(r.last_completed_stage || 'queued')}}</td>
               <td style="font-size:0.8rem; color:var(--text-muted)">${{r.started_at ? new Date(r.started_at).toLocaleTimeString() : '-'}}</td>
               <td style="font-size:0.8rem; color:var(--text-muted)">${{r.completed_at ? new Date(r.completed_at).toLocaleTimeString() : '-'}}</td>
@@ -1682,8 +1962,8 @@ def get_campaign_detail_html() -> str:
           eventsEl.innerHTML = data.events.map(ev => `
             <div class="timeline-item">
               <div class="timeline-dot"></div>
-              <div style="font-size:0.75rem; color:#60a5fa; font-weight:600;">${{escapeHtml(ev.event_type)}} &bull; ${{new Date(ev.created_at).toLocaleTimeString()}}</div>
-              <div style="font-size:0.8rem; color:#d1d5db; margin-top:0.2rem;">${{escapeHtml(ev.message)}}</div>
+              <div style="font-size:0.75rem; color:var(--info); font-weight:600;">${{escapeHtml(ev.event_type)}} &bull; ${{new Date(ev.created_at).toLocaleTimeString()}}</div>
+              <div style="font-size:0.8rem; color:var(--text-primary); margin-top:0.2rem;">${{escapeHtml(ev.message)}}</div>
             </div>
           `).join('');
         }}
@@ -1734,8 +2014,8 @@ def get_review_html() -> str:
       align-items: start;
     }}
     .queue-sidebar {{
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
       border-radius: 12px;
       max-height: calc(100vh - 120px);
       display: flex;
@@ -1744,8 +2024,8 @@ def get_review_html() -> str:
     }}
     .queue-header {{
       padding: 1rem;
-      border-bottom: 1px solid var(--card-border);
-      background: #131b2e;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
     }}
     .queue-list {{
       overflow-y: auto;
@@ -1753,14 +2033,14 @@ def get_review_html() -> str:
     }}
     .queue-item {{
       padding: 0.85rem 1rem;
-      border-bottom: 1px solid #1a2333;
+      border-bottom: 1px solid var(--border);
       cursor: pointer;
       transition: all 0.15s;
     }}
-    .queue-item:hover {{ background: rgba(30, 41, 59, 0.5); }}
+    .queue-item:hover {{ background: var(--bg-elevated); }}
     .queue-item.active {{
-      background: rgba(59, 130, 246, 0.15);
-      border-left: 3px solid var(--accent);
+      background: rgba(76, 141, 245, 0.12);
+      border-left: 3px solid var(--info);
     }}
     .editor-section textarea {{
       font-family: 'JetBrains Mono', monospace;
@@ -1768,8 +2048,8 @@ def get_review_html() -> str:
       line-height: 1.6;
     }}
     .review-action-banner {{
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.25);
+      background: rgba(63, 185, 80, 0.1);
+      border: 1px solid rgba(63, 185, 80, 0.25);
       border-radius: 8px;
       padding: 1rem 1.25rem;
       display: flex;
@@ -1823,13 +2103,14 @@ def get_review_html() -> str:
           <div class="card" style="padding: 1.25rem; margin-bottom: 1rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
               <div>
-                <span class="badge" id="rev-status-pill">-</span>
+                <span id="rev-status-pill">-</span>
                 <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;" id="rev-campaign-name"></span>
               </div>
-              <div style="display:flex; gap:0.5rem;" id="decision-actions">
-                <button class="btn btn-secondary btn-sm" onclick="saveDraftEdits()">💾 Save Edits</button>
-                <button class="btn btn-danger btn-sm" onclick="openRejectModal()">✕ Reject</button>
-                <button class="btn btn-success btn-sm" onclick="approveCurrentReview()">✓ Approve (Wait for Delivery)</button>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;" id="decision-actions">
+                <button type="button" class="btn btn-secondary" onclick="saveDraftEdits()">💾 Save Changes</button>
+                <button type="button" class="btn btn-secondary" id="revert-draft-btn" onclick="revertDraftToOriginal()">↺ Revert to original</button>
+                <button type="button" class="btn btn-danger" onclick="openRejectModal()">✕ Reject</button>
+                <button type="button" class="btn btn-success" onclick="approveCurrentReview()">✓ Approve (Wait for Delivery)</button>
               </div>
             </div>
           </div>
@@ -1837,29 +2118,29 @@ def get_review_html() -> str:
           <!-- Waiting for Delivery Banner (if already approved) -->
           <div class="review-action-banner" id="delivery-trigger-banner" style="display:none;">
             <div>
-              <strong style="color: #34d399; font-size: 0.95rem;">✓ Approved — Waiting for Explicit Delivery</strong>
+              <strong style="color: var(--success); font-size: 0.95rem;">✓ Approved — Waiting for Explicit Delivery</strong>
               <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
                 Review decision is authoritative. Triggering delivery runs all 11 server safety gates and stages to disk or sends live.
               </p>
             </div>
-            <button class="btn btn-purple btn-sm" id="deliver-now-btn" onclick="executeDeliveryForCurrentRun()">⚡ Deliver Outbound Email</button>
+            <button class="btn btn-purple" id="deliver-now-btn" onclick="executeDeliveryForCurrentRun()">⚡ Deliver Outbound Email</button>
           </div>
 
           <!-- Intelligence Grid -->
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
             <div class="card" style="margin-bottom:0">
-              <div class="card-title"><span>Company Intelligence</span><span class="badge badge-blue" id="d-comp-score">-</span></div>
+              <div class="card-title"><span>Company Intelligence</span><span id="d-comp-score">-</span></div>
               <h3 style="font-size: 1.1rem; font-weight:700;" id="d-comp-name">-</h3>
-              <p style="font-size: 0.8rem; color:#60a5fa;" id="d-comp-domain">-</p>
+              <p style="font-size: 0.8rem; color:var(--info);" id="d-comp-domain">-</p>
               <div style="font-size: 0.82rem; color:var(--text-muted); margin: 0.5rem 0;" id="d-comp-industry">-</div>
               <div id="d-comp-signals" style="margin-top:0.5rem;"></div>
             </div>
 
             <div class="card" style="margin-bottom:0">
-              <div class="card-title"><span>Verified Contact Quality</span><span class="badge" id="d-contact-badge">-</span></div>
+              <div class="card-title"><span>Verified Contact Quality</span><span id="d-contact-badge">-</span></div>
               <h3 style="font-size: 1.1rem; font-weight:700;" id="d-person-name">-</h3>
               <p style="font-size: 0.8rem; color:var(--text-muted);" id="d-person-role">-</p>
-              <div style="font-size: 0.88rem; font-family:'JetBrains Mono',monospace; color:#34d399; margin: 0.5rem 0;" id="d-contact-email">-</div>
+              <div style="font-size: 0.88rem; font-family:'JetBrains Mono',monospace; color:var(--success); margin: 0.5rem 0;" id="d-contact-email">-</div>
               <div style="font-size: 0.78rem; color:var(--text-muted);" id="d-person-confidence"></div>
             </div>
           </div>
@@ -1867,7 +2148,7 @@ def get_review_html() -> str:
           <!-- Draft Editor -->
           <div class="card editor-section">
             <div class="card-title">
-              <span>Authoritative Email Draft Editor</span>
+              <span>AI draft — edit before approving</span>
               <span class="badge badge-purple" id="d-draft-persona">persona</span>
             </div>
             <div class="form-group">
@@ -1884,7 +2165,7 @@ def get_review_html() -> str:
           <div class="card">
             <div class="card-title">
               <span>Pipeline Event Audit Trail</span>
-              <button class="btn btn-secondary btn-sm" onclick="toggleAuditTimeline()" style="padding:0.2rem 0.5rem; font-size:0.75rem;">Toggle Trail</button>
+              <button class="btn btn-secondary btn-sm" onclick="toggleAuditTimeline()">Toggle Trail</button>
             </div>
             <div id="audit-trail-container" style="max-height: 200px; overflow-y:auto;"></div>
           </div>
@@ -1917,6 +2198,7 @@ def get_review_html() -> str:
     let currentReviewId = null;
     let currentReview = null;
     let reviewQueue = [];
+    let activeOriginalDraft = {{ subject: '', body: '' }};
 
     async function loadQueue() {{
       const user = await checkAuth();
@@ -1940,11 +2222,11 @@ def get_review_html() -> str:
 
         container.innerHTML = reviewQueue.map(item => `
           <div class="queue-item ${{item.id === currentReviewId ? 'active' : ''}}" onclick="selectReview('${{item.id}}')">
-            <div style="font-weight:700; font-size:0.88rem; color:#fff;">${{escapeHtml(item.company_name)}}</div>
-            <div style="font-size:0.75rem; color:#60a5fa;">${{escapeHtml(item.person_name || 'Leader Unresolved')}}</div>
+            <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${{escapeHtml(item.company_name)}}</div>
+            <div style="font-size:0.75rem; color:var(--info);">${{escapeHtml(item.person_name || 'Leader Unresolved')}}</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.35rem;">
-              <span class="badge badge-${{item.status === 'pending' ? 'amber' : (item.status === 'approved' ? 'green' : 'red')}}">${{escapeHtml(item.status)}}</span>
-              <span style="font-size:0.72rem; color:var(--text-muted);">${{item.match_score || 0}}/100</span>
+              ${{renderStatusBadge(item.status)}}
+              ${{renderScoreBar(item.match_score || 0)}}
             </div>
           </div>
         `).join('');
@@ -1972,18 +2254,17 @@ def get_review_html() -> str:
 
         // Header
         const pill = document.getElementById('rev-status-pill');
-        pill.textContent = currentReview.status;
-        pill.className = 'badge badge-' + (currentReview.status === 'pending' ? 'amber' : (currentReview.status === 'approved' ? 'green' : 'red'));
+        pill.innerHTML = renderStatusBadge(currentReview.status);
         document.getElementById('rev-campaign-name').textContent = 'Campaign: ' + (currentReview.campaign?.name || '-');
 
         // Company
         document.getElementById('d-comp-name').textContent = currentReview.company?.company_name || '-';
         document.getElementById('d-comp-domain').textContent = currentReview.company?.domain || '-';
         document.getElementById('d-comp-industry').textContent = `${{currentReview.company?.industry || 'Tech'}} &bull; ${{currentReview.company?.stage || 'Early-Stage'}} &bull; ${{currentReview.company?.location || 'Remote'}}`;
-        document.getElementById('d-comp-score').textContent = `Match ${{currentReview.company?.match_score || 0}}/100`;
+        document.getElementById('d-comp-score').innerHTML = renderScoreBar(currentReview.company?.match_score || 0);
 
-        const signals = (currentReview.company?.technical_signals || []).concat(currentReview.company?.why_match || []).slice(0, 4);
-        document.getElementById('d-comp-signals').innerHTML = signals.map(s => `<span class="tag-pill">${{escapeHtml(s)}}</span>`).join('');
+        const signals = (currentReview.company?.technical_signals || []).concat(currentReview.company?.why_match || []);
+        document.getElementById('d-comp-signals').innerHTML = renderSignalChips(signals);
 
         // Person & Contact
         const p = currentReview.person;
@@ -1993,14 +2274,17 @@ def get_review_html() -> str:
         document.getElementById('d-contact-email').textContent = c?.email || 'No email resolved';
 
         const conf = p?.person_confidence || 0;
-        document.getElementById('d-person-confidence').textContent = `Person confidence: ${{(conf * 100).toFixed(0)}}% (gate: &ge; 70%)`;
+        document.getElementById('d-person-confidence').innerHTML = `Person confidence: ${{(conf * 100).toFixed(0)}}% (gate: &ge; 70%)`;
 
         const contactBadge = document.getElementById('d-contact-badge');
-        contactBadge.textContent = c?.verification_status || 'unverified';
-        contactBadge.className = 'badge ' + (c?.verification_status === 'valid' ? 'badge-green' : 'badge-amber');
+        contactBadge.innerHTML = renderStatusBadge(c?.verification_status || 'unverified');
 
         // Draft
         const draft = currentReview.draft || {{}};
+        activeOriginalDraft = {{
+          subject: draft.subject || '',
+          body: draft.body || ''
+        }};
         document.getElementById('draft-subject').value = currentReview.edited_subject || draft.subject || '';
         document.getElementById('draft-body').value = currentReview.edited_body || draft.body || '';
         document.getElementById('d-draft-persona').textContent = draft.persona || 'standard';
@@ -2017,16 +2301,26 @@ def get_review_html() -> str:
           trailContainer.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem">No events logged.</p>';
         }} else {{
           trailContainer.innerHTML = events.map(ev => `
-            <div style="font-size:0.78rem; padding:0.35rem 0; border-bottom:1px solid #1a2333;">
-              <span style="color:#60a5fa; font-weight:600;">${{escapeHtml(ev.event_type)}}</span>
+            <div style="font-size:0.78rem; padding:0.35rem 0; border-bottom:1px solid var(--border);">
+              <span style="color:var(--info); font-weight:600;">${{escapeHtml(ev.event_type)}}</span>
               <span style="color:var(--text-muted); margin-left:0.5rem;">${{new Date(ev.created_at).toLocaleTimeString()}}</span>
-              <div style="color:#d1d5db; margin-top:0.15rem;">${{escapeHtml(ev.message)}}</div>
+              <div style="color:var(--text-primary); margin-top:0.15rem;">${{escapeHtml(ev.message)}}</div>
             </div>
           `).join('');
         }}
       }} catch (err) {{
         showToast('Error: ' + err.message, true);
       }}
+    }}
+
+    function revertDraftToOriginal() {{
+      if (!activeOriginalDraft) {{
+        showToast('No original draft available to revert', true);
+        return;
+      }}
+      document.getElementById('draft-subject').value = activeOriginalDraft.subject || '';
+      document.getElementById('draft-body').value = activeOriginalDraft.body || '';
+      showToast('Reverted draft to original AI generated text');
     }}
 
     async function saveDraftEdits() {{
@@ -2249,12 +2543,6 @@ def get_deliveries_html() -> str:
         }}
 
         tbody.innerHTML = deliveriesList.map((d, idx) => {{
-          let badgeClass = 'badge-gray';
-          if (d.delivery_status === 'sent') badgeClass = 'badge-green';
-          else if (d.delivery_status === 'staged') badgeClass = 'badge-cyan';
-          else if (d.delivery_status === 'failed') badgeClass = 'badge-red';
-          else if (d.delivery_status === 'blocked_safety') badgeClass = 'badge-amber';
-
           const artifactOrErr = d.staged_file_path || d.error_message || '-';
 
           return `
@@ -2265,12 +2553,12 @@ def get_deliveries_html() -> str:
               </td>
               <td>
                 <div>${{escapeHtml(d.recipient_name || '-')}}</div>
-                <div style="font-size:0.75rem; color:#60a5fa; font-family:'JetBrains Mono',monospace;">${{escapeHtml(d.recipient_email || 'No email')}}</div>
+                <div style="font-size:0.75rem; color:var(--info); font-family:'JetBrains Mono',monospace;">${{escapeHtml(d.recipient_email || 'No email')}}</div>
               </td>
               <td style="font-size:0.8rem;">${{escapeHtml(d.campaign_name)}}</td>
-              <td><span class="badge ${{badgeClass}}">${{escapeHtml(d.delivery_status)}}</span></td>
+              <td>${{renderStatusBadge(d.delivery_status)}}</td>
               <td>
-                <span class="badge badge-purple">${{escapeHtml(d.delivery_mode)}}</span>
+                ${{renderStatusBadge(d.delivery_mode)}}
                 <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:0.2rem;">${{escapeHtml(d.provider)}}</span>
               </td>
               <td style="font-size:0.78rem; color:var(--text-muted);">${{d.delivered_at ? new Date(d.delivered_at).toLocaleString() : '-'}}</td>
@@ -2278,7 +2566,7 @@ def get_deliveries_html() -> str:
                 ${{escapeHtml(artifactOrErr.slice(0, 35))}}${{artifactOrErr.length > 35 ? '...' : ''}}
               </td>
               <td>
-                <button onclick="inspectAuditRecord(${{idx}})" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Inspect Audit</button>
+                <button onclick="inspectAuditRecord(${{idx}})" class="btn btn-secondary btn-sm">Inspect Audit</button>
               </td>
             </tr>
           `;
@@ -2313,9 +2601,9 @@ def get_deliveries_html() -> str:
       listEl.innerHTML = gates.map(g => {{
         const isPassed = audit[g.key] !== false;
         return `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem; border-bottom:1px solid #1f2937;">
-            <span style="font-size:0.85rem; color:#e5e7eb;">${{g.name}}</span>
-            <span class="badge badge-${{isPassed ? 'green' : 'red'}}">${{isPassed ? 'Passed' : 'Blocked'}}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem; border-bottom:1px solid var(--border);">
+            <span style="font-size:0.85rem; color:var(--text-primary);">${{g.name}}</span>
+            ${{renderStatusBadge(isPassed ? 'passed' : 'blocked')}}
           </div>
         `;
       }}).join('');
@@ -2500,18 +2788,18 @@ def get_profile_html() -> str:
         tbody.innerHTML = list.map(r => `
           <tr>
             <td><strong>${{escapeHtml(r.filename)}}</strong></td>
-            <td><span class="badge badge-${{r.parsing_status === 'completed' ? 'green' : (r.parsing_status === 'failed' ? 'red' : 'amber')}}">${{escapeHtml(r.parsing_status)}}</span></td>
+            <td>${{renderStatusBadge(r.parsing_status)}}</td>
             <td>
-              ${{r.is_active ? '<span class="badge badge-blue">&bull; Active for Campaigns</span>' : '<span style="color:var(--text-muted);font-size:0.75rem">Inactive</span>'}}
+              ${{r.is_active ? '<span class="badge badge-green"><span aria-hidden="true">●</span> Active for Campaigns</span>' : '<span style="color:var(--text-muted);font-size:0.75rem">Inactive</span>'}}
             </td>
             <td style="font-size:0.8rem; color:var(--text-muted);">${{new Date(r.uploaded_at).toLocaleDateString()}}</td>
             <td>
-              <span class="tag-pill">Security / Infra</span>
-              <span class="tag-pill">AI / ML</span>
-              <span class="tag-pill">HR / Talent</span>
+              <span class="chip">Security / Infra</span>
+              <span class="chip">AI / ML</span>
+              <span class="chip">HR / Talent</span>
             </td>
             <td>
-              ${{!r.is_active ? `<button onclick="activateResume('${{r.id}}')" class="btn btn-secondary btn-sm">Set as Active</button>` : '<span style="color:#34d399; font-size:0.8rem;">Current Active</span>'}}
+              ${{!r.is_active ? `<button onclick="activateResume('${{r.id}}')" class="btn btn-secondary btn-sm">Set as Active</button>` : '<span style="color:var(--success); font-size:0.8rem;"><span aria-hidden="true">✓</span> Current Active</span>'}}
             </td>
           </tr>
         `).join('');
@@ -2650,7 +2938,7 @@ def get_settings_html() -> str:
       justify-content: space-between;
       align-items: center;
       padding: 0.85rem 0;
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid var(--border);
     }}
     .settings-row:last-child {{ border-bottom: none; }}
   </style>
@@ -2667,11 +2955,11 @@ def get_settings_html() -> str:
     </div>
 
     <!-- Security Warning Banner -->
-    <div class="card" style="border-color: rgba(59, 130, 246, 0.4); background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, var(--card-bg) 100%);">
+    <div class="card" style="border-color: rgba(76, 141, 245, 0.4); background: linear-gradient(180deg, rgba(76, 141, 245, 0.08) 0%, var(--bg-surface) 100%);">
       <div style="display:flex; gap:0.75rem; align-items:flex-start;">
         <span style="font-size:1.3rem;">🔒</span>
         <div>
-          <strong style="color:#60a5fa; font-size:0.95rem;">Authoritative Server Boundary Policy</strong>
+          <strong style="color:var(--info); font-size:0.95rem;">Authoritative Server Boundary Policy</strong>
           <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.35rem; line-height:1.5;">
             Outbound email dispatch gates (<code>DELIVERY_MODE</code>, <code>DRY_RUN</code>, <code>CONFIRM_LIVE</code>) are strictly controlled via server-side environment configuration. The web console cannot override dispatch safety gates. All credentials and secrets are withheld from client presentation.
           </p>
@@ -2687,7 +2975,7 @@ def get_settings_html() -> str:
           <strong>System Health</strong>
           <div style="font-size:0.78rem; color:var(--text-muted);">Core API health and database connection</div>
         </div>
-        <span class="badge badge-green" id="health-status">Healthy (1.0.0)</span>
+        <span class="badge badge-green" id="health-status"><span aria-hidden="true">●</span> Healthy (1.0.0)</span>
       </div>
 
       <div class="settings-row">
@@ -2695,7 +2983,7 @@ def get_settings_html() -> str:
           <strong>Delivery Mode</strong>
           <div style="font-size:0.78rem; color:var(--text-muted);">Outbound execution mode (stub, staged, live)</div>
         </div>
-        <span class="badge badge-purple" id="set-delivery-mode">staged</span>
+        <span class="badge badge-purple" id="set-delivery-mode"><span aria-hidden="true">🧪</span> staged</span>
       </div>
 
       <div class="settings-row">
@@ -2703,7 +2991,7 @@ def get_settings_html() -> str:
           <strong>Dry Run Staging Enforced</strong>
           <div style="font-size:0.78rem; color:var(--text-muted);">Prevents external provider dispatch side-effects</div>
         </div>
-        <span class="badge badge-cyan" id="set-dry-run">True (Staging Active)</span>
+        <span class="badge badge-cyan" id="set-dry-run"><span aria-hidden="true">🛡</span> True (Staging Active)</span>
       </div>
 
       <div class="settings-row">
@@ -2711,7 +2999,7 @@ def get_settings_html() -> str:
           <strong>Confirm Live Flag</strong>
           <div style="font-size:0.78rem; color:var(--text-muted);">Required environment flag for live sending</div>
         </div>
-        <span class="badge badge-gray" id="set-confirm-live">False (Blocked)</span>
+        <span class="badge badge-gray" id="set-confirm-live"><span aria-hidden="true">🔒</span> False (Blocked)</span>
       </div>
     </div>
 
@@ -2739,7 +3027,7 @@ def get_settings_html() -> str:
           <strong>Minimum Person Confidence</strong>
           <div style="font-size:0.78rem; color:var(--text-muted);">Threshold for leader verification acceptance</div>
         </div>
-        <span class="badge badge-blue">&ge; 0.70 (70%)</span>
+        <span class="badge badge-blue"><span aria-hidden="true">🛡</span> &ge; 0.70 (70%)</span>
       </div>
 
       <div class="settings-row">
@@ -2763,9 +3051,11 @@ def get_settings_html() -> str:
         const res = await fetch('/api/v1/health');
         if (res.ok) {{
           const data = await res.json();
-          document.getElementById('health-status').textContent = `${{data.status}} (v${{data.version}})`;
-          document.getElementById('set-delivery-mode').textContent = data.delivery_mode || 'staged';
-          document.getElementById('set-dry-run').textContent = data.dry_run ? 'True (Staging Active)' : 'False (Live Dispatch Allowed)';
+          document.getElementById('health-status').innerHTML = `<span aria-hidden="true">●</span> ${{escapeHtml(data.status)}} (v${{escapeHtml(data.version)}})`;
+          document.getElementById('set-delivery-mode').innerHTML = renderStatusBadge(data.delivery_mode || 'staged');
+          document.getElementById('set-dry-run').innerHTML = data.dry_run
+            ? '<span aria-hidden="true">🛡</span> True (Staging Active)'
+            : '<span aria-hidden="true">⚡</span> False (Live Dispatch Allowed)';
           document.getElementById('set-dry-run').className = 'badge ' + (data.dry_run ? 'badge-cyan' : 'badge-amber');
         }}
       }} catch (e) {{}}

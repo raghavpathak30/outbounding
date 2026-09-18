@@ -264,6 +264,119 @@ SHARED_CSS = """
       list-style: none;
     }
 
+    /* Compact Score Pill */
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.02em;
+    }
+    .score-pill.score-green { background: rgba(63, 185, 80, 0.18); color: var(--success); border: 1px solid rgba(63, 185, 80, 0.35); }
+    .score-pill.score-amber { background: rgba(210, 153, 34, 0.18); color: var(--warning); border: 1px solid rgba(210, 153, 34, 0.35); }
+    .score-pill.score-red   { background: rgba(248, 81, 73, 0.18); color: var(--danger); border: 1px solid rgba(248, 81, 73, 0.35); }
+
+    /* Metadata Chip */
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 0.18rem 0.5rem;
+      font-size: 0.76rem;
+    }
+
+    /* Workflow Stepper */
+    .workflow-stepper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1.5rem;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+    }
+    .stepper-step {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      white-space: nowrap;
+    }
+    .stepper-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .stepper-step.active .stepper-num {
+      background: var(--info);
+      color: #FFFFFF;
+      border-color: var(--info);
+    }
+    .stepper-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .stepper-step.active .stepper-label {
+      color: var(--text-primary);
+    }
+    .stepper-divider {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      min-width: 24px;
+    }
+
+    /* Stage Panel */
+    .stage-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+    }
+    .stage-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .stage-panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .stage-panel-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
     .toast {
       position: fixed;
       bottom: 2rem;
@@ -750,26 +863,86 @@ def get_dashboard_html() -> str:
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     {SHARED_CSS}
-    .metrics-grid {{
+    .primary-metrics-grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
     }}
     .metric-card {{
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.25rem;
+      border-radius: 12px;
+      padding: 1.35rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      transition: all 0.2s ease;
     }}
-    .metric-label {{ font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }}
-    .metric-value {{ font-size: 2rem; font-weight: 700; margin: 0.5rem 0 0.25rem 0; font-family: 'JetBrains Mono', monospace; }}
-    .metric-card.attention-amber {{ border-color: rgba(210, 153, 34, 0.4); background: linear-gradient(180deg, rgba(210, 153, 34, 0.08) 0%, var(--bg-surface) 100%); }}
-    .metric-card.attention-purple {{ border-color: rgba(188, 140, 255, 0.4); background: linear-gradient(180deg, rgba(188, 140, 255, 0.08) 0%, var(--bg-surface) 100%); }}
-    .metric-card.attention-red {{ border-color: rgba(248, 81, 73, 0.4); background: linear-gradient(180deg, rgba(248, 81, 73, 0.08) 0%, var(--bg-surface) 100%); }}
+    .metric-card.primary-card {{
+      min-height: 140px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }}
+    .metric-card.primary-card:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    }}
+    .metric-label {{ font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }}
+    .metric-value {{ font-size: 2.2rem; font-weight: 700; margin: 0.5rem 0 0.25rem 0; font-family: 'JetBrains Mono', monospace; }}
+    .metric-footer {{ display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); margin-top: 0.5rem; }}
+    .metric-card.attention-amber {{ border-color: rgba(210, 153, 34, 0.5); background: linear-gradient(180deg, rgba(210, 153, 34, 0.1) 0%, var(--bg-surface) 100%); }}
+    .metric-card.attention-purple {{ border-color: rgba(188, 140, 255, 0.5); background: linear-gradient(180deg, rgba(188, 140, 255, 0.1) 0%, var(--bg-surface) 100%); }}
+    .metric-card.attention-green {{ border-color: rgba(63, 185, 80, 0.5); background: linear-gradient(180deg, rgba(63, 185, 80, 0.1) 0%, var(--bg-surface) 100%); }}
+    .metric-card.attention-red {{ border-color: rgba(248, 81, 73, 0.5); background: linear-gradient(180deg, rgba(248, 81, 73, 0.1) 0%, var(--bg-surface) 100%); }}
+
+    /* Progressive Disclosure */
+    .disclosure-bar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding: 0.25rem 0.25rem;
+    }}
+    .toggle-metrics-btn {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }}
+    .toggle-metrics-btn:hover {{
+      background: var(--bg-elevated);
+      border-color: var(--info);
+    }}
+    .secondary-metrics-panel {{
+      margin-bottom: 2rem;
+      animation: slideDown 0.25s ease;
+    }}
+    .secondary-metrics-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }}
+    .secondary-card {{
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+    }}
+    .secondary-card .metric-value {{
+      font-size: 1.65rem;
+      margin: 0.35rem 0 0.15rem 0;
+    }}
+    @keyframes slideDown {{
+      from {{ opacity: 0; transform: translateY(-8px); }}
+      to {{ opacity: 1; transform: translateY(0); }}
+    }}
+
     .gauges-grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -801,52 +974,97 @@ def get_dashboard_html() -> str:
       </div>
     </div>
 
-    <!-- Live Authoritative Metric Summary Cards -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <span class="metric-label">Active Campaigns</span>
-        <div class="metric-value" id="stat-campaigns">-</div>
-        <span style="font-size:0.75rem; color:var(--text-muted)">Target outreach</span>
-      </div>
-      <div class="metric-card">
-        <span class="metric-label">Discovered</span>
-        <div class="metric-value" id="stat-discovered">-</div>
-        <span style="font-size:0.75rem; color:var(--text-muted)">Candidate pool</span>
-      </div>
-      <div class="metric-card">
-        <span class="metric-label">Selected</span>
-        <div class="metric-value" id="stat-selected">-</div>
-        <span style="font-size:0.75rem; color:var(--text-muted)">Ready/Enqueued</span>
-      </div>
-      <div class="metric-card">
-        <span class="metric-label">Processing</span>
-        <div class="metric-value" id="stat-processing">-</div>
-        <span style="font-size:0.75rem; color:var(--text-muted)">Queued & running</span>
-      </div>
-      <div class="metric-card attention-amber">
-        <span class="metric-label" style="color:var(--warning)">Waiting Review</span>
+    <!-- Primary Action Hero Metrics (Top 4 Max) -->
+    <div class="primary-metrics-grid">
+      <div class="metric-card attention-amber primary-card" onclick="window.location.href='/review'" style="cursor:pointer;" title="Open Review Queue">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="metric-label" style="color:var(--warning)">Needs Review</span>
+          <span class="badge badge-amber"><span aria-hidden="true">◷</span> Action</span>
+        </div>
         <div class="metric-value" style="color:var(--warning)" id="stat-waiting-review">-</div>
-        <span style="font-size:0.75rem; color:var(--warning)">Human action required</span>
+        <div class="metric-footer">
+          <span>Human edits required before delivery</span>
+          <span style="color:var(--warning); font-weight:600;">Open &rarr;</span>
+        </div>
       </div>
-      <div class="metric-card attention-purple">
-        <span class="metric-label" style="color:var(--purple)">Waiting Delivery</span>
+
+      <div class="metric-card attention-purple primary-card" onclick="window.location.href='/deliveries'" style="cursor:pointer;" title="Inspect Deliveries">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="metric-label" style="color:var(--purple)">Ready to Send</span>
+          <span class="badge badge-purple"><span aria-hidden="true">✓</span> Approved</span>
+        </div>
         <div class="metric-value" style="color:var(--purple)" id="stat-waiting-delivery">-</div>
-        <span style="font-size:0.75rem; color:var(--purple)">Approved for dispatch</span>
+        <div class="metric-footer">
+          <span>Approved drafts waiting for dispatch</span>
+          <span style="color:var(--purple); font-weight:600;">Inspect &rarr;</span>
+        </div>
       </div>
-      <div class="metric-card">
-        <span class="metric-label">Sent</span>
-        <div class="metric-value" style="color:var(--success)" id="stat-sent">-</div>
-        <span style="font-size:0.75rem; color:var(--text-muted)">Live dispatches</span>
+
+      <div class="metric-card attention-green primary-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="metric-label" style="color:var(--success)">Sent Today</span>
+          <span class="badge badge-green" id="primary-sent-status"><span aria-hidden="true">✓</span> Active</span>
+        </div>
+        <div class="metric-value" style="color:var(--success)" id="stat-sent-today">-</div>
+        <div class="metric-footer">
+          <span id="stat-sent-today-sub">Rolling 24h unified cap</span>
+        </div>
       </div>
-      <div class="metric-card">
-        <span class="metric-label">Staged</span>
-        <div class="metric-value" style="color:var(--cyan)" id="stat-staged">-</div>
-        <span style="font-size:0.75rem; color:var(--text-muted)">Dry-run safe</span>
-      </div>
-      <div class="metric-card attention-red">
-        <span class="metric-label" style="color:var(--danger)">Failed Runs</span>
+
+      <div class="metric-card attention-red primary-card" onclick="switchAttentionTab('failed')" style="cursor:pointer;" title="Triage Failed Runs">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="metric-label" style="color:var(--danger)">Errors</span>
+          <span class="badge badge-red"><span aria-hidden="true">⚠</span> Audit</span>
+        </div>
         <div class="metric-value" style="color:var(--danger)" id="stat-failed">-</div>
-        <span style="font-size:0.75rem; color:var(--danger)">Needs audit</span>
+        <div class="metric-footer">
+          <span>Failed pipeline runs needing audit</span>
+          <span style="color:var(--danger); font-weight:600;">Triage &darr;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progressive Disclosure Trigger -->
+    <div class="disclosure-bar">
+      <button type="button" class="toggle-metrics-btn" id="toggle-metrics-btn" onclick="toggleSecondaryMetrics()">
+        <span id="toggle-metrics-icon">▾</span> <span id="toggle-metrics-text">Show All Pipeline Metrics (5)</span>
+      </button>
+      <span style="font-size:0.78rem; color:var(--text-muted)">Secondary metrics & pipeline funnel</span>
+    </div>
+
+    <!-- Collapsible Secondary Metrics Drawer (Revealed on 1 Click) -->
+    <div id="secondary-metrics-panel" class="secondary-metrics-panel" style="display: none;">
+      <div class="secondary-metrics-grid">
+        <div class="metric-card secondary-card">
+          <span class="metric-label">Active Campaigns</span>
+          <div class="metric-value" id="stat-campaigns">-</div>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Target outreach tracks</span>
+        </div>
+        <div class="metric-card secondary-card">
+          <span class="metric-label">Discovered Pool</span>
+          <div class="metric-value" id="stat-discovered">-</div>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Total candidate accounts</span>
+        </div>
+        <div class="metric-card secondary-card">
+          <span class="metric-label">Selected</span>
+          <div class="metric-value" id="stat-selected">-</div>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Enqueued / Approved pool</span>
+        </div>
+        <div class="metric-card secondary-card">
+          <span class="metric-label">In-Flight Processing</span>
+          <div class="metric-value" id="stat-processing">-</div>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Active enrichment jobs</span>
+        </div>
+        <div class="metric-card secondary-card">
+          <span class="metric-label">Staged (Dry-Run)</span>
+          <div class="metric-value" style="color:var(--cyan)" id="stat-staged">-</div>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Saved to disk safely</span>
+        </div>
+        <div class="metric-card secondary-card">
+          <span class="metric-label">All-Time Sent</span>
+          <div class="metric-value" style="color:var(--success)" id="stat-sent">-</div>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Historical live dispatches</span>
+        </div>
       </div>
     </div>
 
@@ -989,6 +1207,9 @@ def get_dashboard_html() -> str:
         const weekUsed = caps.sends_week || 0;
         const weekMax = caps.max_week || 50;
 
+        document.getElementById('stat-sent-today').textContent = `${{dayUsed}} / ${{dayMax}}`;
+        document.getElementById('stat-sent-today-sub').textContent = `${{dayUsed}} of ${{dayMax}} max daily cap used`;
+
         document.getElementById('daily-cap-text').textContent = `${{dayUsed}} / ${{dayMax}}`;
         const dayPct = Math.min(100, Math.round((dayUsed / dayMax) * 100));
         const dayBar = document.getElementById('daily-cap-bar');
@@ -1117,6 +1338,21 @@ def get_dashboard_html() -> str:
         }}
       }} catch (e) {{
         showToast('Delivery request failed: ' + e.message, true);
+      }}
+    }}
+
+    function toggleSecondaryMetrics() {{
+      const panel = document.getElementById('secondary-metrics-panel');
+      const icon = document.getElementById('toggle-metrics-icon');
+      const text = document.getElementById('toggle-metrics-text');
+      if (panel.style.display === 'none' || panel.style.display === '') {{
+        panel.style.display = 'block';
+        icon.textContent = '▴';
+        text.textContent = 'Hide Secondary Pipeline Metrics';
+      }} else {{
+        panel.style.display = 'none';
+        icon.textContent = '▾';
+        text.textContent = 'Show All Pipeline Metrics (5)';
       }}
     }}
 
@@ -1409,11 +1645,125 @@ def get_campaign_detail_html() -> str:
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
+      padding: 1.25rem;
     }}
-    .targeting-item-label {{ font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }}
-    .targeting-item-val {{ font-size: 0.88rem; color: var(--text-primary); font-weight: 500; margin-top: 0.25rem; }}
+    .targeting-item-label {{ font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; }}
+    .targeting-item-val {{ font-size: 0.92rem; color: var(--text-primary); font-weight: 600; margin-top: 0.35rem; }}
+
+    /* Discovery Action Box in Stage 2 */
+    .discovery-action-box {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }}
+
+    /* Candidate Cards in Stage 3 */
+    .candidate-cards-list {{
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }}
+    .candidate-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      display: grid;
+      grid-template-columns: auto auto 1fr auto;
+      gap: 1.25rem;
+      align-items: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }}
+    .candidate-card:hover {{
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }}
+    .candidate-card.selected {{
+      border-color: var(--info);
+      background: rgba(76, 141, 245, 0.07);
+      box-shadow: 0 0 0 1px rgba(76, 141, 245, 0.35);
+    }}
+    .candidate-card.contacted {{
+      opacity: 0.55;
+    }}
+    .candidate-card-checkbox {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    .candidate-card-checkbox input[type="checkbox"] {{
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--info);
+    }}
+    .candidate-card-score {{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 76px;
+      padding: 0.4rem 0.6rem;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }}
+    .candidate-card-main {{
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-width: 0;
+    }}
+    .candidate-card-title-row {{
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }}
+    .candidate-company-name {{
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }}
+    .candidate-domain-link {{
+      font-size: 0.8rem;
+      color: var(--info);
+      text-decoration: none;
+    }}
+    .candidate-domain-link:hover {{
+      text-decoration: underline;
+    }}
+    .candidate-card-meta-row {{
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }}
+    .candidate-card-signals-row {{
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-top: 0.15rem;
+    }}
+    .candidate-card-status {{
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.5rem;
+      min-width: 100px;
+    }}
+
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }}
     .filters-group {{ display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }}
     .selection-banner {{
@@ -1462,7 +1812,7 @@ def get_campaign_detail_html() -> str:
       <a href="/campaigns" style="color:var(--text-muted); font-size:0.85rem;">&larr; Back to Campaigns</a>
     </div>
 
-    <div class="page-header">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
       <div>
         <div style="display:flex; align-items:center; gap: 0.75rem;">
           <h1 class="page-title" id="campaign-title">Loading Campaign...</h1>
@@ -1470,76 +1820,124 @@ def get_campaign_detail_html() -> str:
         </div>
         <p class="page-subtitle" id="campaign-desc">-</p>
       </div>
-      <div style="display:flex; gap:0.5rem; align-items:center;">
-        <select id="discovery-limit" style="width: auto; padding: 0.5rem 0.75rem;">
-          <option value="5">Discover 5</option>
-          <option value="10" selected>Discover 10</option>
-          <option value="20">Discover 20</option>
-        </select>
-        <button class="btn btn-primary" id="run-discover-btn" onclick="triggerDiscovery()">⚡ Run Discovery</button>
+    </div>
+
+    <!-- 3-Stage Workflow Stepper -->
+    <div class="workflow-stepper">
+      <div class="stepper-step active">
+        <span class="stepper-num">1</span>
+        <span class="stepper-label">Set Criteria</span>
+      </div>
+      <div class="stepper-divider"></div>
+      <div class="stepper-step active">
+        <span class="stepper-num">2</span>
+        <span class="stepper-label">Find Companies</span>
+      </div>
+      <div class="stepper-divider"></div>
+      <div class="stepper-step active">
+        <span class="stepper-num">3</span>
+        <span class="stepper-label">Review & Select</span>
       </div>
     </div>
 
-    <!-- Targeting Summary Card -->
-    <div class="targeting-grid">
-      <div>
-        <span class="targeting-item-label">Target Geography</span>
-        <div class="targeting-item-val" id="tg-geo">-</div>
+    <!-- Stage 1 Panel: Targeting Criteria & ICP Spec -->
+    <div class="stage-panel">
+      <div class="stage-panel-header">
+        <div>
+          <div class="stage-panel-title"><span>🎯</span> Stage 1: Targeting Criteria & ICP Spec</div>
+          <p class="stage-panel-desc">Defined search parameters for lead qualification, scoring, and leadership discovery</p>
+        </div>
+        <span class="badge badge-blue"><span aria-hidden="true">✓</span> Active Criteria</span>
       </div>
-      <div>
-        <span class="targeting-item-label">Industry</span>
-        <div class="targeting-item-val" id="tg-ind">-</div>
+
+      <div class="targeting-grid">
+        <div>
+          <span class="targeting-item-label">Target Geography</span>
+          <div class="targeting-item-val" id="tg-geo">-</div>
+        </div>
+        <div>
+          <span class="targeting-item-label">Industry</span>
+          <div class="targeting-item-val" id="tg-ind">-</div>
+        </div>
+        <div>
+          <span class="targeting-item-label">Company Size</span>
+          <div class="targeting-item-val" id="tg-size">-</div>
+        </div>
+        <div>
+          <span class="targeting-item-label">Stage</span>
+          <div class="targeting-item-val" id="tg-stage">-</div>
+        </div>
+        <div>
+          <span class="targeting-item-label">Target Roles</span>
+          <div class="targeting-item-val" id="tg-roles">-</div>
+        </div>
       </div>
-      <div>
-        <span class="targeting-item-label">Company Size</span>
-        <div class="targeting-item-val" id="tg-size">-</div>
-      </div>
-      <div>
-        <span class="targeting-item-label">Stage</span>
-        <div class="targeting-item-val" id="tg-stage">-</div>
-      </div>
-      <div>
-        <span class="targeting-item-label">Target Roles</span>
-        <div class="targeting-item-val" id="tg-roles">-</div>
+
+      <div style="background:var(--bg-base); border:1px solid var(--border); border-radius:8px; padding:0.85rem 1.25rem; margin-top:1rem; font-size:0.82rem; line-height:1.5; color:var(--text-secondary);">
+        <div style="font-weight:600; color:var(--text-primary); margin-bottom:0.35rem;">
+          How targeting is applied for this campaign
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:1.25rem;">
+          <div><strong style="color:var(--text-primary);">Search filters:</strong> Location, industry, and company size narrow the initial company search.</div>
+          <div><strong style="color:var(--text-primary);">Match scoring:</strong> Funding stage and technologies determine relevance and rank candidates in the list below.</div>
+          <div><strong style="color:var(--text-primary);">Leadership search:</strong> Target roles guide who we look for when identifying verified technical leaders.</div>
+        </div>
       </div>
     </div>
 
-    <!-- Targeting Application Microcopy -->
-    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.85rem 1.25rem; margin-top:1rem; font-size:0.82rem; line-height:1.5; color:var(--text-secondary);">
-      <div style="font-weight:600; color:var(--text-primary); margin-bottom:0.35rem;">
-        How targeting is applied for this campaign
+    <!-- Stage 2 Panel: Company Discovery Engine -->
+    <div class="stage-panel">
+      <div class="stage-panel-header">
+        <div>
+          <div class="stage-panel-title"><span>🔍</span> Stage 2: Candidate Discovery Engine</div>
+          <p class="stage-panel-desc">Query Apollo.io live targeting adapter to pull verified company leads</p>
+        </div>
+        <span id="comps-count-badge" class="badge badge-gray">0 candidates in pool</span>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:1.25rem;">
-        <div><strong style="color:var(--text-primary);">Search filters:</strong> Location, industry, and company size narrow the initial company search.</div>
-        <div><strong style="color:var(--text-primary);">Match scoring:</strong> Funding stage and technologies determine relevance and rank candidates in the table below.</div>
-        <div><strong style="color:var(--text-primary);">Leadership search:</strong> Target roles guide who we look for when identifying verified technical leaders.</div>
+
+      <div class="discovery-action-box">
+        <div>
+          <p style="font-size:0.88rem; color:var(--text-primary); font-weight:600; margin-bottom:0.25rem;">Fetch New Candidate Batch</p>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">Discovered leads are automatically deduplicated against historical dispatches and existing database records.</p>
+        </div>
+        <div style="display:flex; gap:0.6rem; align-items:center;">
+          <select id="discovery-limit" style="width: auto; padding: 0.5rem 0.75rem; min-height: 40px;">
+            <option value="5">Discover 5 Companies</option>
+            <option value="10" selected>Discover 10 Companies</option>
+            <option value="20">Discover 20 Companies</option>
+          </select>
+          <button class="btn btn-primary" id="run-discover-btn" onclick="triggerDiscovery()" style="min-height: 40px;">⚡ Run Discovery</button>
+        </div>
       </div>
     </div>
 
-    <!-- Selection & Enqueue Banner -->
-    <div class="selection-banner" id="enqueue-banner">
-      <div>
-        <strong id="selected-summary-text">0 companies selected</strong>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
-          Enqueuing submits selected companies for background research, email resolution, and draft generation. Emails are NOT sent at this stage.
-        </p>
-      </div>
-      <div style="display:flex; gap:0.5rem;">
-        <button class="btn btn-secondary" onclick="saveCurrentSelection()">Save Selection</button>
-        <button class="btn btn-success" id="enqueue-btn" onclick="enqueueSelectedRuns()">Enqueue Selected Companies &rarr;</button>
-      </div>
-    </div>
-
-    <!-- Candidate Discovery Table Section -->
-    <div class="card">
-      <div class="card-title">
-        <span>Candidate Discovery Grid (Deterministic 100-Point Ranking)</span>
-        <span id="comps-count-badge" class="badge badge-gray">0 candidates</span>
+    <!-- Stage 3 Panel: Candidate Selection & Enqueue -->
+    <div class="stage-panel">
+      <div class="stage-panel-header">
+        <div>
+          <div class="stage-panel-title"><span>📋</span> Stage 3: Candidate Review, Scoring & Selection</div>
+          <p class="stage-panel-desc">Deterministic 100-point ranking math. Select companies for background enrichment.</p>
+        </div>
       </div>
 
+      <!-- Selection & Enqueue Banner -->
+      <div class="selection-banner" id="enqueue-banner">
+        <div>
+          <strong id="selected-summary-text">0 companies selected</strong>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Enqueuing submits selected companies for background research, email resolution, and draft generation. Emails are NOT sent at this stage.
+          </p>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-secondary" onclick="saveCurrentSelection()">Save Selection</button>
+          <button class="btn btn-success" id="enqueue-btn" onclick="enqueueSelectedRuns()">Enqueue Selected Companies &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Filter Toolbar -->
       <div class="toolbar">
         <div class="filters-group">
-          <input type="text" id="filter-search" placeholder="Search domain or company..." style="width: 220px;" oninput="applyFilters()">
+          <input type="text" id="filter-search" placeholder="Search domain or company..." style="width: 240px;" oninput="applyFilters()">
           <select id="filter-status" onchange="applyFilters()" style="width: auto;">
             <option value="">All Statuses</option>
             <option value="discovered">Discovered</option>
@@ -1553,37 +1951,28 @@ def get_campaign_detail_html() -> str:
             <option value="60">Score &ge; 60</option>
           </select>
         </div>
-        <div style="display:flex; gap:0.5rem;">
+        <div style="display:flex; gap:0.5rem; align-items:center;">
           <button class="btn btn-secondary btn-sm" onclick="selectAllFiltered(true)">Select All Visible</button>
           <button class="btn btn-secondary btn-sm" onclick="selectAllFiltered(false)">Deselect All</button>
         </div>
       </div>
 
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40px;"><input type="checkbox" id="master-checkbox" onchange="toggleMasterCheckbox(this)"></th>
-              <th>Company / Domain</th>
-              <th>Location</th>
-              <th>Industry / Stage</th>
-              <th>Size</th>
-              <th>Match Score</th>
-              <th>Signals</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="candidates-tbody">
-            <tr><td colspan="8" class="empty-state">No candidates discovered yet. Click <strong>Run Discovery</strong> above to find target companies.</td></tr>
-          </tbody>
-        </table>
+      <!-- Candidate Discovery Cards List -->
+      <div id="candidates-container" class="candidate-cards-list">
+        <div class="empty-state" style="padding: 2.5rem; border: 1px dashed var(--border); border-radius: 8px;">
+          No candidates discovered yet. Click <strong>Run Discovery</strong> above to find target companies.
+        </div>
       </div>
+      <table style="display:none;"><tbody id="candidates-tbody"></tbody></table>
     </div>
 
-    <!-- Pipeline Runs Progress Section -->
-    <div class="card" style="margin-top: 2rem;">
-      <div class="card-title">
-        <span>Pipeline Execution Runs</span>
+    <!-- Stage 4 / Pipeline Runs Progress Section -->
+    <div class="stage-panel" style="margin-top: 2rem;">
+      <div class="stage-panel-header">
+        <div>
+          <div class="stage-panel-title"><span>⚙️</span> Pipeline Execution Activity</div>
+          <p class="stage-panel-desc">Real-time status of enqueued background enrichment, leader discovery, and draft generation</p>
+        </div>
         <span id="runs-count-badge" class="badge badge-purple">0 runs</span>
       </div>
 
@@ -1702,42 +2091,64 @@ def get_campaign_detail_html() -> str:
     }}
 
     function renderCompanies(comps) {{
+      const container = document.getElementById('candidates-container');
       const tbody = document.getElementById('candidates-tbody');
+
       if (comps.length === 0) {{
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No matching candidate companies.</td></tr>';
+        const emptyHtml = '<div class="empty-state" style="padding: 2.5rem; border: 1px dashed var(--border); border-radius: 8px;">No matching candidate companies. Try adjusting filters or click <strong>Run Discovery</strong> above.</div>';
+        if (container) container.innerHTML = emptyHtml;
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No matching candidate companies.</td></tr>';
         return;
       }}
 
-      tbody.innerHTML = comps.map(c => {{
-        const isContacted = c.selection_status === 'contacted';
-        const isChecked = selectedIds.has(c.id);
-        const score = c.match_score || 0;
-        const allSignals = (c.technical_signals || []).concat(c.why_match || []);
+      if (container) {{
+        container.innerHTML = comps.map(c => {{
+          const isContacted = c.selection_status === 'contacted';
+          const isChecked = selectedIds.has(c.id);
+          const score = Math.max(0, Math.min(100, Math.round(Number(c.match_score) || 0)));
+          let scorePillClass = 'score-red';
+          if (score >= 70) scorePillClass = 'score-green';
+          else if (score >= 50) scorePillClass = 'score-amber';
 
-        return `
-          <tr style="${{isContacted ? 'opacity:0.6' : ''}}">
-            <td>
-              <input type="checkbox" value="${{c.id}}"
-                ${{isChecked ? 'checked' : ''}}
-                ${{isContacted ? 'disabled title="Already contacted"' : ''}}
-                onchange="toggleCompanySelect('${{c.id}}', this.checked)">
-            </td>
-            <td>
-              <strong>${{escapeHtml(c.company_name)}}</strong><br>
-              <a href="https://${{encodeURIComponent(c.domain)}}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem; color:var(--info);">${{escapeHtml(c.domain)}} &nearr;</a>
-            </td>
-            <td style="font-size:0.8rem">${{escapeHtml(c.location || 'Remote')}}</td>
-            <td>
-              <span class="badge badge-gray">${{escapeHtml(c.industry || 'Tech')}}</span><br>
-              <span style="font-size:0.75rem; color:var(--text-muted)">${{escapeHtml(c.stage || '-')}}</span>
-            </td>
-            <td style="font-size:0.8rem">${{c.size || '-'}}</td>
-            <td>${{renderScoreBar(score)}}</td>
-            <td>${{renderSignalChips(allSignals)}}</td>
-            <td>${{renderStatusBadge(c.selection_status)}}</td>
-          </tr>
-        `;
-      }}).join('');
+          const allSignals = (c.technical_signals || []).concat(c.why_match || []);
+
+          return `
+            <div class="candidate-card ${{isChecked ? 'selected' : ''}} ${{isContacted ? 'contacted' : ''}}" id="cand-card-${{c.id}}">
+              <div class="candidate-card-checkbox">
+                <input type="checkbox" value="${{c.id}}"
+                  ${{isChecked ? 'checked' : ''}}
+                  ${{isContacted ? 'disabled title="Already contacted"' : ''}}
+                  onchange="toggleCompanySelect('${{c.id}}', this.checked)">
+              </div>
+              <div class="candidate-card-score">
+                <span class="score-pill ${{scorePillClass}}">${{score}}</span>
+                <span style="font-size:0.68rem; color:var(--text-muted); margin-top:0.25rem;">/ 100</span>
+              </div>
+              <div class="candidate-card-main">
+                <div class="candidate-card-title-row">
+                  <span class="candidate-company-name">${{escapeHtml(c.company_name)}}</span>
+                  <a href="https://${{encodeURIComponent(c.domain)}}" target="_blank" rel="noopener noreferrer" class="candidate-domain-link">${{escapeHtml(c.domain)}} &nearr;</a>
+                </div>
+                <div class="candidate-card-meta-row">
+                  <span class="meta-chip">📍 ${{escapeHtml(c.location || 'Remote')}}</span>
+                  <span class="meta-chip">🏢 ${{escapeHtml(c.industry || 'Tech')}}</span>
+                  <span class="meta-chip">👥 ${{escapeHtml(c.size || 'Size -')}}</span>
+                  <span class="meta-chip">🌱 ${{escapeHtml(c.stage || 'Stage -')}}</span>
+                </div>
+                ${{allSignals.length > 0 ? `
+                <div class="candidate-card-signals-row">
+                  <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-right:0.25rem;">Signals:</span>
+                  ${{renderSignalChips(allSignals)}}
+                </div>` : ''}}
+              </div>
+              <div class="candidate-card-status">
+                ${{renderStatusBadge(c.selection_status)}}
+                ${{isContacted ? '<span style="font-size:0.72rem; color:var(--text-muted);">Previously contacted</span>' : ''}}
+              </div>
+            </div>
+          `;
+        }}).join('');
+      }}
     }}
 
     function applyFilters() {{
@@ -1758,25 +2169,40 @@ def get_campaign_detail_html() -> str:
     function toggleCompanySelect(id, checked) {{
       if (checked) selectedIds.add(id);
       else selectedIds.delete(id);
+      const card = document.getElementById('cand-card-' + id);
+      if (card) {{
+        if (checked) card.classList.add('selected');
+        else card.classList.remove('selected');
+      }}
       updateSelectedBanner();
     }}
 
     function toggleMasterCheckbox(master) {{
-      const checkboxes = document.querySelectorAll('#candidates-tbody input[type="checkbox"]:not(:disabled)');
+      const checkboxes = document.querySelectorAll('#candidates-container input[type="checkbox"]:not(:disabled)');
       checkboxes.forEach(cb => {{
         cb.checked = master.checked;
         if (master.checked) selectedIds.add(cb.value);
         else selectedIds.delete(cb.value);
+        const card = document.getElementById('cand-card-' + cb.value);
+        if (card) {{
+          if (master.checked) card.classList.add('selected');
+          else card.classList.remove('selected');
+        }}
       }});
       updateSelectedBanner();
     }}
 
     function selectAllFiltered(selectVal) {{
-      const checkboxes = document.querySelectorAll('#candidates-tbody input[type="checkbox"]:not(:disabled)');
+      const checkboxes = document.querySelectorAll('#candidates-container input[type="checkbox"]:not(:disabled)');
       checkboxes.forEach(cb => {{
         cb.checked = selectVal;
         if (selectVal) selectedIds.add(cb.value);
         else selectedIds.delete(cb.value);
+        const card = document.getElementById('cand-card-' + cb.value);
+        if (card) {{
+          if (selectVal) card.classList.add('selected');
+          else card.classList.remove('selected');
+        }}
       }});
       updateSelectedBanner();
     }}
@@ -2021,10 +2447,25 @@ def get_review_html() -> str:
     {SHARED_CSS}
     .cockpit-container {{
       display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 1.5rem;
+      grid-template-columns: 260px minmax(460px, 1fr) 340px;
+      gap: 1.25rem;
       align-items: start;
     }}
+    @media (max-width: 1240px) {{
+      .cockpit-container {{
+        grid-template-columns: 240px 1fr;
+      }}
+      .inspector-pane {{
+        grid-column: 1 / -1;
+      }}
+    }}
+    @media (max-width: 820px) {{
+      .cockpit-container {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+
+    /* Left Sidebar: Visually Light Queue */
     .queue-sidebar {{
       background: var(--bg-surface);
       border: 1px solid var(--border);
@@ -2035,30 +2476,95 @@ def get_review_html() -> str:
       overflow: hidden;
     }}
     .queue-header {{
-      padding: 1rem;
+      padding: 0.85rem 1rem;
       border-bottom: 1px solid var(--border);
       background: var(--bg-elevated);
+    }}
+    .queue-search-input {{
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
     }}
     .queue-list {{
       overflow-y: auto;
       flex: 1;
     }}
-    .queue-item {{
-      padding: 0.85rem 1rem;
+    .queue-item-light {{
+      padding: 0.55rem 0.85rem;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.15s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 42px;
     }}
-    .queue-item:hover {{ background: var(--bg-elevated); }}
-    .queue-item.active {{
-      background: rgba(76, 141, 245, 0.12);
+    .queue-item-light:hover {{
+      background: var(--bg-elevated);
+    }}
+    .queue-item-light.active {{
+      background: rgba(76, 141, 245, 0.14);
       border-left: 3px solid var(--info);
+      padding-left: calc(0.85rem - 3px);
     }}
-    .editor-section textarea {{
+    .queue-item-name {{
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }}
+    .queue-item-light.active .queue-item-name {{
+      color: var(--info);
+    }}
+
+    /* Center: Dominant Draft Editor Pane */
+    .editor-pane {{
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }}
+    .editor-hero-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }}
+    .editor-hero-card textarea {{
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.88rem;
-      line-height: 1.6;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      min-height: 320px;
+      resize: vertical;
+      background: var(--bg-base);
+      border-color: var(--border-strong);
     }}
+    .editor-hero-card textarea:focus {{
+      border-color: var(--info);
+      box-shadow: 0 0 0 3px rgba(76, 141, 245, 0.25);
+    }}
+
+    /* Right: Context & Inspector Pane */
+    .inspector-pane {{
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }}
+    .inspector-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem 1.25rem;
+    }}
+
     .review-action-banner {{
       background: rgba(63, 185, 80, 0.1);
       border: 1px solid rgba(63, 185, 80, 0.25);
@@ -2067,7 +2573,7 @@ def get_review_html() -> str:
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0;
     }}
   </style>
 </head>
@@ -2091,96 +2597,107 @@ def get_review_html() -> str:
     </div>
 
     <div class="cockpit-container">
-      <!-- Left Sidebar Queue -->
+      <!-- PANE 1: Left Sidebar Queue (Visually Light) -->
       <div class="queue-sidebar">
         <div class="queue-header">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Review Queue</strong>
+            <strong style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Review Queue</strong>
             <span class="badge badge-amber" id="q-count-badge">0</span>
           </div>
+          <input type="text" id="queue-search" class="queue-search-input" placeholder="Filter company..." oninput="filterQueueList()">
         </div>
         <div class="queue-list" id="queue-container">
           <div style="padding:1.5rem; text-align:center; color:var(--text-muted); font-size:0.85rem;">Loading queue...</div>
         </div>
       </div>
 
-      <!-- Right Detail & Edit Console -->
-      <div id="detail-panel">
-        <div class="card" id="empty-detail-card" style="display:block; text-align:center; padding: 3rem;">
-          <p style="color:var(--text-muted);">Select a candidate draft from the queue to begin review.</p>
+      <!-- Empty state placeholder when nothing selected -->
+      <div class="card" id="empty-detail-card" style="display:block; text-align:center; padding: 4rem; grid-column: 2 / -1;">
+        <p style="color:var(--text-muted); font-size: 1rem;">Select a candidate draft from the queue to begin review.</p>
+      </div>
+
+      <!-- PANE 2: Center Dominant Draft Editor Pane -->
+      <div class="editor-pane" id="editor-center-pane" style="display:none;">
+        <!-- Status & Actions Header -->
+        <div class="card" style="padding: 1rem 1.25rem; margin-bottom: 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+            <div>
+              <span id="rev-status-pill">-</span>
+              <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;" id="rev-campaign-name"></span>
+            </div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;" id="decision-actions">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="saveDraftEdits()">💾 Save Changes</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="revert-draft-btn" onclick="revertDraftToOriginal()">↺ Revert to original</button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="openRejectModal()">✕ Reject</button>
+              <button type="button" class="btn btn-success btn-sm" onclick="approveCurrentReview()">✓ Approve (Wait for Delivery)</button>
+            </div>
+          </div>
         </div>
 
-        <div id="active-review-content" style="display:none;">
-          <!-- Status & Actions Header -->
-          <div class="card" style="padding: 1.25rem; margin-bottom: 1rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-              <div>
-                <span id="rev-status-pill">-</span>
-                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;" id="rev-campaign-name"></span>
-              </div>
-              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;" id="decision-actions">
-                <button type="button" class="btn btn-secondary" onclick="saveDraftEdits()">💾 Save Changes</button>
-                <button type="button" class="btn btn-secondary" id="revert-draft-btn" onclick="revertDraftToOriginal()">↺ Revert to original</button>
-                <button type="button" class="btn btn-danger" onclick="openRejectModal()">✕ Reject</button>
-                <button type="button" class="btn btn-success" onclick="approveCurrentReview()">✓ Approve (Wait for Delivery)</button>
-              </div>
-            </div>
+        <!-- Waiting for Delivery Banner (if already approved) -->
+        <div class="review-action-banner" id="delivery-trigger-banner" style="display:none;">
+          <div>
+            <strong style="color: var(--success); font-size: 0.92rem;">✓ Approved — Waiting for Explicit Delivery</strong>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Review decision is authoritative. Triggering delivery runs all 11 server safety gates and stages to disk or sends live.
+            </p>
           </div>
+          <button class="btn btn-purple btn-sm" id="deliver-now-btn" onclick="executeDeliveryForCurrentRun()">⚡ Deliver Outbound Email</button>
+        </div>
 
-          <!-- Waiting for Delivery Banner (if already approved) -->
-          <div class="review-action-banner" id="delivery-trigger-banner" style="display:none;">
-            <div>
-              <strong style="color: var(--success); font-size: 0.95rem;">✓ Approved — Waiting for Explicit Delivery</strong>
-              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
-                Review decision is authoritative. Triggering delivery runs all 11 server safety gates and stages to disk or sends live.
-              </p>
+        <!-- Dominant Draft Editor Card -->
+        <div class="editor-hero-card">
+          <div class="card-title" style="margin-bottom:1rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:1rem; font-weight:700; color:var(--text-primary);">AI Outreach Draft</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">(Human edits strictly authoritative)</span>
             </div>
-            <button class="btn btn-purple" id="deliver-now-btn" onclick="executeDeliveryForCurrentRun()">⚡ Deliver Outbound Email</button>
+            <span class="badge badge-purple" id="d-draft-persona">persona</span>
           </div>
-
-          <!-- Intelligence Grid -->
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
-            <div class="card" style="margin-bottom:0">
-              <div class="card-title"><span>Company Intelligence</span><span id="d-comp-score">-</span></div>
-              <h3 style="font-size: 1.1rem; font-weight:700;" id="d-comp-name">-</h3>
-              <p style="font-size: 0.8rem; color:var(--info);" id="d-comp-domain">-</p>
-              <div style="font-size: 0.82rem; color:var(--text-muted); margin: 0.5rem 0;" id="d-comp-industry">-</div>
-              <div id="d-comp-signals" style="margin-top:0.5rem;"></div>
-            </div>
-
-            <div class="card" style="margin-bottom:0">
-              <div class="card-title"><span>Verified Contact Quality</span><span id="d-contact-badge">-</span></div>
-              <h3 style="font-size: 1.1rem; font-weight:700;" id="d-person-name">-</h3>
-              <p style="font-size: 0.8rem; color:var(--text-muted);" id="d-person-role">-</p>
-              <div style="font-size: 0.88rem; font-family:'JetBrains Mono',monospace; color:var(--success); margin: 0.5rem 0;" id="d-contact-email">-</div>
-              <div style="font-size: 0.78rem; color:var(--text-muted);" id="d-person-confidence"></div>
-            </div>
+          <div class="form-group">
+            <label for="draft-subject">Subject Line</label>
+            <input type="text" id="draft-subject" style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:0.95rem;">
           </div>
-
-          <!-- Draft Editor -->
-          <div class="card editor-section">
-            <div class="card-title">
-              <span>AI draft — edit before approving</span>
-              <span class="badge badge-purple" id="d-draft-persona">persona</span>
-            </div>
-            <div class="form-group">
-              <label for="draft-subject">Subject Line</label>
-              <input type="text" id="draft-subject" style="font-family:'JetBrains Mono',monospace; font-weight:600;">
-            </div>
-            <div class="form-group">
-              <label for="draft-body">Email Body (Human edits remain strictly authoritative)</label>
-              <textarea id="draft-body" rows="9"></textarea>
-            </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="draft-body">Email Body (Edit before approving)</label>
+            <textarea id="draft-body" rows="14"></textarea>
           </div>
+        </div>
+      </div>
 
-          <!-- Audit Events Timeline -->
-          <div class="card">
-            <div class="card-title">
-              <span>Pipeline Event Audit Trail</span>
-              <button class="btn btn-secondary btn-sm" onclick="toggleAuditTimeline()">Toggle Trail</button>
-            </div>
-            <div id="audit-trail-container" style="max-height: 200px; overflow-y:auto;"></div>
+      <!-- PANE 3: Right Inspector Pane (Context & Intelligence) -->
+      <div class="inspector-pane" id="inspector-right-pane" style="display:none;">
+        <!-- Company Intelligence -->
+        <div class="inspector-card">
+          <div class="card-title">
+            <span>Company Intelligence</span>
+            <span id="d-comp-score">-</span>
           </div>
+          <h3 style="font-size: 1.05rem; font-weight:700;" id="d-comp-name">-</h3>
+          <p style="font-size: 0.8rem; color:var(--info); margin-top:0.2rem;" id="d-comp-domain">-</p>
+          <div style="font-size: 0.8rem; color:var(--text-muted); margin: 0.5rem 0;" id="d-comp-industry">-</div>
+          <div id="d-comp-signals" style="margin-top:0.5rem;"></div>
+        </div>
+
+        <!-- Verified Contact Quality -->
+        <div class="inspector-card">
+          <div class="card-title">
+            <span>Verified Contact</span>
+            <span id="d-contact-badge">-</span>
+          </div>
+          <h3 style="font-size: 1.05rem; font-weight:700;" id="d-person-name">-</h3>
+          <p style="font-size: 0.8rem; color:var(--text-muted); margin-top:0.2rem;" id="d-person-role">-</p>
+          <div style="font-size: 0.85rem; font-family:'JetBrains Mono',monospace; color:var(--success); margin: 0.5rem 0;" id="d-contact-email">-</div>
+          <div style="font-size: 0.76rem; color:var(--text-muted);" id="d-person-confidence"></div>
+        </div>
+
+        <!-- Audit Timeline -->
+        <div class="inspector-card">
+          <div class="card-title">
+            <span>Pipeline Audit Trail</span>
+            <button class="btn btn-secondary btn-sm" onclick="toggleAuditTimeline()" style="padding:0.2rem 0.5rem; font-size:0.75rem;">Toggle</button>
+          </div>
+          <div id="audit-trail-container" style="max-height: 200px; overflow-y:auto;"></div>
         </div>
       </div>
     </div>
@@ -2227,21 +2744,25 @@ def get_review_html() -> str:
 
         if (reviewQueue.length === 0) {{
           container.innerHTML = '<div style="padding:1.5rem; text-align:center; color:var(--text-muted); font-size:0.85rem;">No reviews in this status.</div>';
-          document.getElementById('active-review-content').style.display = 'none';
+          document.getElementById('editor-center-pane').style.display = 'none';
+          document.getElementById('inspector-right-pane').style.display = 'none';
           document.getElementById('empty-detail-card').style.display = 'block';
           return;
         }}
 
-        container.innerHTML = reviewQueue.map(item => `
-          <div class="queue-item ${{item.id === currentReviewId ? 'active' : ''}}" onclick="selectReview('${{item.id}}')">
-            <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${{escapeHtml(item.company_name)}}</div>
-            <div style="font-size:0.75rem; color:var(--info);">${{escapeHtml(item.person_name || 'Leader Unresolved')}}</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.35rem;">
-              ${{renderStatusBadge(item.status)}}
-              ${{renderScoreBar(item.match_score || 0)}}
+        container.innerHTML = reviewQueue.map(item => {{
+          const score = Math.max(0, Math.min(100, Math.round(Number(item.match_score) || 0)));
+          let scoreClass = 'score-red';
+          if (score >= 70) scoreClass = 'score-green';
+          else if (score >= 50) scoreClass = 'score-amber';
+
+          return `
+            <div class="queue-item-light ${{item.id === currentReviewId ? 'active' : ''}}" data-id="${{item.id}}" onclick="selectReview('${{item.id}}')">
+              <span class="queue-item-name" title="${{escapeHtml(item.company_name)}}">${{escapeHtml(item.company_name)}}</span>
+              <span class="score-pill ${{scoreClass}}">${{score}}</span>
             </div>
-          </div>
-        `).join('');
+          `;
+        }}).join('');
 
         // If no active review or selected was removed, select first
         if (!currentReviewId || !reviewQueue.some(r => r.id === currentReviewId)) {{
@@ -2252,9 +2773,21 @@ def get_review_html() -> str:
       }}
     }}
 
+    function filterQueueList() {{
+      const q = (document.getElementById('queue-search')?.value || '').toLowerCase();
+      document.querySelectorAll('.queue-item-light').forEach(el => {{
+        const nameEl = el.querySelector('.queue-item-name');
+        const name = nameEl ? nameEl.textContent.toLowerCase() : '';
+        el.style.display = (!q || name.includes(q)) ? 'flex' : 'none';
+      }});
+    }}
+
     async function selectReview(id) {{
       currentReviewId = id;
-      document.querySelectorAll('.queue-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.queue-item-light').forEach(el => {{
+        if (el.getAttribute('data-id') === id) el.classList.add('active');
+        else el.classList.remove('active');
+      }});
 
       try {{
         const res = await fetch(`/api/v1/review/${{id}}`);
@@ -2262,7 +2795,8 @@ def get_review_html() -> str:
         currentReview = await res.json();
 
         document.getElementById('empty-detail-card').style.display = 'none';
-        document.getElementById('active-review-content').style.display = 'block';
+        document.getElementById('editor-center-pane').style.display = 'flex';
+        document.getElementById('inspector-right-pane').style.display = 'flex';
 
         // Header
         const pill = document.getElementById('rev-status-pill');

@@ -338,6 +338,9 @@ def main():
             run_single_domain(d, resume_context, auto_approve=args.auto_approve)
     except DailyQuotaExhaustedError:
         sys.exit(1)
+    except RuntimeError as e:
+        sys.stderr.write(f"Error: {e}\n")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

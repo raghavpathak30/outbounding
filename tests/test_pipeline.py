@@ -40,7 +40,7 @@ from pipeline.config import (
 )
 from pipeline.drafting import detect_persona, load_resume_context
 from pipeline.contacted_log import record_contacted, is_already_contacted, check_volume_caps, load_contacted_log
-from main import run_discovered_flow
+from main import main as cli_main, run_discovered_flow
 
 @pytest.fixture
 def resume_data():
@@ -303,11 +303,9 @@ def test_live_drafting_prompt_construction(monkeypatch, resume_data):
 def test_live_drafting_company_context_grounding(resume_data, monkeypatch):
     """
     Verifies that LiveDraftingAdapter:
-    (a) Uses company_context in the prompt and grounds opener in fallback when present.
-    (b) Falls back to honest generic opener and strict anti-fabrication prohibition when company_context is missing/empty.
+    (a) Uses company_context in the prompt and requires a grounded opener when present.
+    (b) Applies the strict anti-fabrication prohibition when company_context is missing/empty.
     """
-    monkeypatch.setenv("GEMINI_API_KEY", "")
-    monkeypatch.setenv("GOOGLE_API_KEY", "")
     adapter = LiveDraftingAdapter()
 
     # (a) When company_context is present
@@ -327,17 +325,6 @@ def test_live_drafting_company_context_grounding(resume_data, monkeypatch):
     assert "Announced $28M Series B expansion" in prompt_with_ctx
     assert "GROUNDED OPENING REQUIRED" in prompt_with_ctx
 
-    # Offline fallback with company_context
-    draft_with_ctx = adapter.draft(
-        role="Chief Information Security Officer & VP Infrastructure",
-        domain="apex-vault-fintech.io",
-        resume_context=resume_data,
-        contact_name="Devon Sterling",
-        company_context=company_ctx
-    )
-    assert "Series B expansion" in draft_with_ctx
-    assert "Saw apex-vault-fintech.io's announcement" in draft_with_ctx
-
     # (b) When company_context is missing or None
     prompt_no_ctx, _, _ = adapter.build_prompt(
         role="Chief Information Security Officer & VP Infrastructure",
@@ -348,18 +335,6 @@ def test_live_drafting_company_context_grounding(resume_data, monkeypatch):
     )
     assert "Verified Target Company Signal: None" in prompt_no_ctx
     assert "STRICT PROHIBITION: NEVER claim or imply prior familiarity" in prompt_no_ctx
-
-    # Offline fallback with missing company_context
-    draft_no_ctx = adapter.draft(
-        role="Chief Information Security Officer & VP Infrastructure",
-        domain="apex-vault-fintech.io",
-        resume_context=resume_data,
-        contact_name="Devon Sterling",
-        company_context=None
-    )
-    assert "I'm reaching out directly given your infrastructure security leadership" in draft_no_ctx
-    assert "saw your team's work" not in draft_no_ctx.lower()
-    assert "following your engineering updates" not in draft_no_ctx.lower()
 
 # 9. Hunter.io Verification: Valid Email Flows to Drafting
 def test_hunter_email_verification_valid_flows_to_drafting(monkeypatch, resume_data):
@@ -1902,11 +1877,11 @@ def test_research_discovery_aborts_on_daily_quota_without_candidate_looping(monk
     assert "midnight Pacific Time" in captured.out
 
 
-# 49. Live Drafting Adapter Gracefully Handles Daily Quota Exhaustion
-def test_live_drafting_adapter_daily_quota_fallback(monkeypatch, resume_data, capsys):
+# 49. Live Drafting Adapter Fails on Daily Quota Exhaustion
+def test_live_drafting_adapter_daily_quota_raises(monkeypatch, resume_data, capsys):
     """
     Verifies that when LiveDraftingAdapter encounters DailyQuotaExhaustedError,
-    it prints the clear daily quota message and falls back to structured local synthesis.
+    it prints the clear daily quota message and raises instead of producing a template email.
     """
     monkeypatch.setenv("GEMINI_API_KEY", "mock_key_drafting_quota")
     adapter = LiveDraftingAdapter()
@@ -1920,19 +1895,29 @@ def test_live_drafting_adapter_daily_quota_fallback(monkeypatch, resume_data, ca
         mock_llm_instance.invoke.side_effect = Mock429("429 Quota exceeded: requests per day")
         MockLLM.return_value = mock_llm_instance
 
-        draft = adapter.draft(
-            role="Principal Security Engineer",
-            domain="vault-guard.io",
-            resume_context=resume_data,
-            contact_name="Bob Security"
-        )
+        with pytest.raises(DailyQuotaExhaustedError):
+            adapter.draft(
+                role="Principal Security Engineer",
+                domain="vault-guard.io",
+                resume_context=resume_data,
+                contact_name="Bob Security"
+            )
 
-    # Asserts structured local offline fallback draft was returned
-    assert "Subject: Encrypted transaction compute & security" in draft
-    assert "Bob Security" in draft
     captured = capsys.readouterr()
     assert "GEMINI FREE TIER DAILY QUOTA EXHAUSTED" in captured.out
     assert "midnight Pacific Time" in captured.out
+
+
+# 49b. CLI reports a drafting failure without a traceback
+def test_cli_domain_mode_reports_runtime_error_and_exits(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["main.py", "--domain", "target.example"])
+
+    with patch("main.run_single_domain", side_effect=RuntimeError("Gemini returned an empty draft.")):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main()
+
+    assert excinfo.value.code == 1
+    assert "Gemini returned an empty draft." in capsys.readouterr().err
 
 
 # 50. Proactive Gemini Call Pacing (RPM Protection)

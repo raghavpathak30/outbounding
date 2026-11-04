@@ -121,37 +121,6 @@ def test_prompt_forbids_a_link_when_no_portfolio_exists(resume_context):
     assert "No portfolio URL is available" in prompt
 
 
-@pytest.mark.parametrize("role", ALL_ROLES)
-def test_offline_fallback_omits_portfolio_line_when_no_portfolio_exists(monkeypatch, role):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-
-    draft = LiveDraftingAdapter().draft(
-        role=role, domain="target.example", resume_context={}, contact_name="Sam Rivera"
-    )
-
-    assert "raghavpathak.dev" not in draft
-    dangling = [line for line in draft.splitlines() if line.rstrip().endswith(":")]
-    assert dangling == []
-
-
-@pytest.mark.parametrize("role", ALL_ROLES)
-def test_offline_fallback_uses_profile_portfolio(monkeypatch, role):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-
-    draft = LiveDraftingAdapter().draft(
-        role=role,
-        domain="target.example",
-        resume_context={"personal": {"portfolio": RESUME_URL}},
-        contact_name="Sam Rivera",
-        operator_profile={"portfolio_url": PROFILE_URL},
-    )
-
-    assert PROFILE_URL in draft
-    assert RESUME_URL not in draft
-
-
 # ---------------------------------------------------------------------
 # Persona strings describe emphasis, never facts
 # ---------------------------------------------------------------------

@@ -885,3 +885,69 @@ def test_drafting_tolerates_owner_without_profile(job_ctx):
     kwargs = _run_pipeline_recording_draft_kwargs(job_ctx, job_ctx["u1_id"])
 
     assert kwargs["operator_profile"] is None
+
+
+# =====================================================================
+# Draft failure: no template email, and the company can be retried
+# =====================================================================
+
+def test_draft_failure_fails_run_without_draft_and_retry_reuses_prior_stages(job_ctx, monkeypatch):
+    monkeypatch.setenv("DRAFTING_MODE", "live")
+    monkeypatch.setenv("GEMINI_API_KEY", "mock_key_for_test")
+    monkeypatch.setenv("GEMINI_CALL_DELAY_MS", "0")
+    session_factory = job_ctx["session_factory"]
+    jm = job_ctx["job_manager"]
+
+    session = session_factory()
+    campaign = Campaign(user_id=job_ctx["u1_id"], name="Retry Campaign", objective="Objective")
+    session.add(campaign)
+    session.commit()
+    session.add(Company(
+        campaign_id=campaign.id,
+        domain="apex-vault-fintech.io",
+        company_name="Apex Vault Fintech",
+        selection_status="selected",
+    ))
+    session.commit()
+    campaign_id = campaign.id
+    session.close()
+
+    def enqueue_and_wait():
+        res = job_ctx["client1"].post(f"/api/v1/campaigns/{campaign_id}/enqueue-selected")
+        assert res.status_code == 200
+        run_id = res.json()["runs"][0]["id"]
+        jm.get_future(run_id).result(timeout=10.0)
+        return run_id
+
+    failing_llm = MagicMock()
+    failing_llm.invoke.side_effect = ValueError("provider detail token=abcdef123456")
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI", return_value=failing_llm):
+        failed_run_id = enqueue_and_wait()
+
+    session = session_factory()
+    failed_run = session.execute(select(PipelineRun).where(PipelineRun.id == failed_run_id)).scalar_one()
+    assert failed_run.status == "failed"
+    assert failed_run.last_completed_stage == "email_resolved"
+    assert "abcdef123456" not in failed_run.error_message
+    assert session.execute(select(Draft)).scalars().all() == []
+    assert session.execute(select(Review)).scalars().all() == []
+    session.close()
+
+    working_llm = MagicMock()
+    working_llm.invoke.return_value = MagicMock(content="Subject: Hello\n\nModel-written body")
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI", return_value=working_llm), \
+            patch("pipeline.adapters.base.AdapterFactory.get_person_research_adapter") as person_factory, \
+            patch("pipeline.adapters.base.AdapterFactory.get_email_resolution_adapter") as email_factory:
+        retry_run_id = enqueue_and_wait()
+
+    assert retry_run_id != failed_run_id
+    person_factory.assert_not_called()
+    email_factory.assert_not_called()
+
+    session = session_factory()
+    retry_run = session.execute(select(PipelineRun).where(PipelineRun.id == retry_run_id)).scalar_one()
+    assert retry_run.status == "waiting_for_review"
+    draft = session.execute(select(Draft)).scalars().one()
+    assert draft.pipeline_run_id == retry_run_id
+    assert draft.body == "Model-written body"
+    session.close()

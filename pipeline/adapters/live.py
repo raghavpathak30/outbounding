@@ -285,10 +285,14 @@ class LiveEnrichmentAdapter(EnrichmentAdapter):
         return None
 
 
+class DraftGenerationError(RuntimeError):
+    """Gemini produced no usable draft. Never replaced with a template email."""
+
+
 class LiveDraftingAdapter(DraftingAdapter):
     """
-    Production Drafting Adapter utilizing ChatGoogleGenerativeAI with latest Gemini models
-    and an intelligent offline synthesis fallback.
+    Production Drafting Adapter utilizing ChatGoogleGenerativeAI with latest Gemini models.
+    Raises when no draft can be generated.
     """
     
     def __init__(self, model_name: Optional[str] = None):
@@ -401,8 +405,7 @@ class LiveDraftingAdapter(DraftingAdapter):
         tools: Optional[List[Any]] = None,
         operator_profile: dict | None = None
     ) -> str:
-        role_str = role or "Engineering Lead"
-        system_instruction, bullets, persona_category = self.build_prompt(
+        system_instruction, _, _ = self.build_prompt(
             role=role,
             domain=domain,
             resume_context=resume_context,
@@ -412,109 +415,47 @@ class LiveDraftingAdapter(DraftingAdapter):
         )
 
         api_key = self.api_key or os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
+        if not api_key:
+            raise DraftGenerationError("Live drafting requires GEMINI_API_KEY or GOOGLE_API_KEY.")
 
-        # If API key is configured, invoke Gemini with proactive pacing and quota retry
-        if api_key:
-            def _call_gemini():
-                if tools:
-                    # Tool-bound calls refactored to Chat.send_message to eliminate AFC warning
-                    from google import genai
-                    from google.genai import types
+        def _call_gemini():
+            if tools:
+                # Tool-bound calls refactored to Chat.send_message to eliminate AFC warning
+                from google import genai
+                from google.genai import types
 
-                    client = genai.Client(api_key=api_key)
-                    chat = client.chats.create(
-                        model=self.model_name,
-                        config=types.GenerateContentConfig(
-                            tools=tools,
-                            temperature=0.3,
-                        )
+                client = genai.Client(api_key=api_key)
+                chat = client.chats.create(
+                    model=self.model_name,
+                    config=types.GenerateContentConfig(
+                        tools=tools,
+                        temperature=0.3,
                     )
-                    response = chat.send_message(system_instruction)
-                    text = extract_llm_text(response)
-                    return text or ""
-                else:
-                    from langchain_google_genai import ChatGoogleGenerativeAI
-                    llm = ChatGoogleGenerativeAI(
-                        model=self.model_name,
-                        google_api_key=api_key,
-                        temperature=0.3
-                    )
-                    response = llm.invoke([{"role": "user", "content": system_instruction}])
-                    text = extract_llm_text(response)
-                    return text or ""
-
-            try:
-                res = execute_with_quota_retry(_call_gemini, adapter_name="LiveDraftingAdapter")
-                if res:
-                    return res
-            except DailyQuotaExhaustedError:
-                logger.warning("Gemini daily quota exhausted during drafting. Using structured local fallback.")
-            except Exception as e:
-                logger.warning(f"Live Gemini invocation failed ({e}), using structured local fallback.")
-
-        # Offline synthesis fallback matching the exact conversational, short coffee-chat style
-        portfolio_url = resolve_portfolio_url(resume_context, operator_profile)
-        greeting = f"Hi {contact_name}," if contact_name else "Hi there,"
-
-        if persona_category == "security_infrastructure":
-            subject = f"Encrypted transaction compute & security — {domain}"
-            if company_context and isinstance(company_context, dict) and "Series B" in company_context.get("signal", ""):
-                opener = f"Saw {domain}'s announcement regarding your Series B expansion to build privacy-preserving encrypted settlement architecture."
-            elif company_context and isinstance(company_context, dict) and company_context.get("signal"):
-                opener = f"Noted {domain}'s recent focus on {company_context['signal']}."
+                )
+                response = chat.send_message(system_instruction)
+                text = extract_llm_text(response)
+                return text or ""
             else:
-                opener = f"I'm reaching out directly given your infrastructure security leadership at {domain}."
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                llm = ChatGoogleGenerativeAI(
+                    model=self.model_name,
+                    google_api_key=api_key,
+                    temperature=0.3
+                )
+                response = llm.invoke([{"role": "user", "content": system_instruction}])
+                text = extract_llm_text(response)
+                return text or ""
 
-            portfolio_line = f"More details on the architecture and benchmarks here: {portfolio_url}\n\n" if portfolio_url else ""
-            body = (
-                f"Subject: {subject}\n\n"
-                f"{greeting}\n\n"
-                f"{opener} "
-                f"I'm an applied security engineer who recently built an encrypted fraud-scoring service using CKKS homomorphic encryption that reached 98% accuracy over live bank transaction data without server-side decryption, alongside vulnerability work analyzing timing side-channels in DSS modular arithmetic.\n\n"
-                f"{portfolio_line}"
-                f"Worth a quick 10-minute chat next week?\n\n"
-                f"Best,\nRaghav Pathak"
-            )
-        elif persona_category == "ai_machine_learning":
-            subject = f"Low-latency Gemini orchestration & agent systems at {domain}"
-            if company_context and isinstance(company_context, dict) and "speculative decoding" in company_context.get("signal", ""):
-                opener = f"Saw {domain}'s open-source release of high-throughput speculative decoding for low-latency LLM serving."
-            elif company_context and isinstance(company_context, dict) and company_context.get("signal"):
-                opener = f"Noted {domain}'s engineering updates around {company_context['signal']}."
-            else:
-                opener = f"I'm reaching out directly to connect with engineering leadership in AI systems and infrastructure at {domain}."
+        try:
+            draft_text = execute_with_quota_retry(_call_gemini, adapter_name="LiveDraftingAdapter")
+        except DailyQuotaExhaustedError:
+            raise
+        except Exception as e:
+            raise DraftGenerationError(f"Gemini drafting call failed ({type(e).__name__}).") from e
 
-            portfolio_line = f"I've shared system breakdowns and open-source code here: {portfolio_url}\n\n" if portfolio_url else ""
-            body = (
-                f"Subject: {subject}\n\n"
-                f"{greeting}\n\n"
-                f"{opener} "
-                f"I've been building low-latency LLM agent pipelines using Google AI Studio and Gemini 2.5, including a solo-built chargeback responder for the Razorpay hackathon where I placed the model directly inside the decision loop rather than treating it as a text wrapper.\n\n"
-                f"{portfolio_line}"
-                f"Happy to send my resume over if useful?\n\n"
-                f"Best,\nRaghav Pathak"
-            )
-        else:
-            subject = f"Systems & AI Engineering — Raghav Pathak for {domain}"
-            if company_context and isinstance(company_context, dict) and ("autonomous" in company_context.get("signal", "") or "technical recruiting" in company_context.get("headline", "")):
-                opener = f"Reaching out because {domain} specializes in technical talent placement for founding engineers in autonomous systems and AI infrastructure."
-            elif company_context and isinstance(company_context, dict) and company_context.get("signal"):
-                opener = f"Reaching out because {domain} focuses on {company_context['signal']}."
-            else:
-                opener = f"I'm reaching out directly regarding technical engineering opportunities at {domain}."
-
-            portfolio_line = f"Portfolio and technical writeups are available at: {portfolio_url}\n\n" if portfolio_url else ""
-            body = (
-                f"Subject: {subject}\n\n"
-                f"{greeting}\n\n"
-                f"{opener} "
-                f"I'm a final-year CS undergrad at LNMIIT focusing on systems security and applied AI. Recently, our team reached the national grand finale at IIT Hyderabad for banking threat detection, and I frequently ship standalone AI and cryptography services with tight SLAs.\n\n"
-                f"{portfolio_line}"
-                f"Open to a brief conversation if there's potential alignment?\n\n"
-                f"Best,\nRaghav Pathak"
-            )
-
-        return body
+        if not draft_text.strip():
+            raise DraftGenerationError("Gemini returned an empty draft.")
+        return draft_text
 
 
 def confirm_recipient_count(recipients: List[Dict[str, Any]]) -> bool:

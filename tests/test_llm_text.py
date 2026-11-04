@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 
 from pipeline.adapters._llm_text import extract_llm_text
-from pipeline.adapters.live import LiveDraftingAdapter
+from pipeline.adapters.live import DraftGenerationError, LiveDraftingAdapter
 from scripts.repair_email_drafts import repair_content_block_repr, scan_and_repair_db
 
 
@@ -172,44 +172,56 @@ def test_live_drafting_adapter_cleans_block_list_response(monkeypatch):
         assert "EqAqCp0qXyz" not in draft
 
 
-def test_live_drafting_adapter_fallback_when_extraction_is_empty(monkeypatch):
-    """
-    LiveDraftingAdapter.draft() falls back to offline template when extraction
-    yields empty string or None (e.g. LLM returned only thinking blocks or whitespace).
-    """
-    monkeypatch.setenv("GEMINI_API_KEY", "mock_key_for_test")
-
-    adapter = LiveDraftingAdapter()
-
-    # Scenario: LLM returns only thinking block, no text
-    empty_content_blocks = [
-        {
-            "type": "thinking",
-            "thinking": "Thinking only, but model failed to generate text block...",
-            "extras": {"signature": "sig123"}
-        }
-    ]
-
-    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as MockLLMClass:
-        mock_llm_instance = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = empty_content_blocks
-        mock_llm_instance.invoke.return_value = mock_response
-        MockLLMClass.return_value = mock_llm_instance
-
-        draft = adapter.draft(
+def _draft_with_llm(llm):
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI", return_value=llm):
+        return LiveDraftingAdapter().draft(
             role="Chief Information Security Officer",
             domain="apex-vault-fintech.io",
             resume_context={"personal": {"portfolio": "https://raghavpathak.dev"}},
             contact_name="Devon Sterling"
         )
 
-        # Verify fallback synthesis was executed
-        assert draft is not None
-        assert len(draft.strip()) > 0
-        assert "Raghav Pathak" in draft
-        assert "Encrypted transaction compute" in draft or "apex-vault-fintech.io" in draft
-        assert "{" not in draft
+
+@pytest.mark.parametrize("content", [
+    # Only a thinking block, no text
+    [{"type": "thinking", "thinking": "No text generated...", "extras": {"signature": "sig123"}}],
+    "",
+    "  \n\t ",
+])
+def test_live_drafting_adapter_raises_when_extraction_is_empty(monkeypatch, content):
+    """An empty model response is a failure, never a reason to produce a template email."""
+    monkeypatch.setenv("GEMINI_API_KEY", "mock_key_for_test")
+    llm = MagicMock()
+    llm.invoke.return_value = MagicMock(content=content)
+
+    with pytest.raises(DraftGenerationError):
+        _draft_with_llm(llm)
+
+
+def test_live_drafting_adapter_raises_when_gemini_call_fails(monkeypatch):
+    """A failed call raises with the cause chained and no provider text in the message."""
+    monkeypatch.setenv("GEMINI_API_KEY", "mock_key_for_test")
+    llm = MagicMock()
+    llm.invoke.side_effect = ValueError("provider detail token=abcdef123456")
+
+    with pytest.raises(DraftGenerationError) as excinfo:
+        _draft_with_llm(llm)
+
+    assert isinstance(excinfo.value.__cause__, ValueError)
+    assert "abcdef123456" not in str(excinfo.value)
+
+
+def test_live_drafting_adapter_raises_without_api_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    with pytest.raises(DraftGenerationError):
+        LiveDraftingAdapter().draft(
+            role="Director of Talent",
+            domain="apex-vault-fintech.io",
+            resume_context={},
+            contact_name="Devon Sterling"
+        )
 
 
 def test_live_drafting_adapter_reads_model_from_env_or_default(monkeypatch):

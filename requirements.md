@@ -35,7 +35,7 @@ The LangGraph pipeline operates over a typed state dictionary (`PipelineState`):
 ### 4.2 DraftingAdapter
 - `draft(role: Optional[str], domain: str, resume_context: dict, contact_name: Optional[str]) -> str`:
   - **Stub Contract**: Returns deterministic, persona-adapted copy referencing specific project bullets.
-  - **Live Contract**: Connects to `ChatGoogleGenerativeAI` using current Gemini model (e.g., `gemini-2.5-pro` or `gemini-1.5-pro` with dynamic model fallback). If API key is not configured, gracefully falls back to structured offline synthesis.
+  - **Live Contract**: Connects to `ChatGoogleGenerativeAI` using current Gemini model (e.g., `gemini-2.5-pro` or `gemini-1.5-pro` with dynamic model fallback). If the API key is not configured, the call fails, or the response is empty, drafting raises; there is no template fallback.
 
 ### 4.3 DeliveryAdapter
 - `deliver(payload: dict, dry_run: bool = True, confirm_live: bool = False) -> dict`:

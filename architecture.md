@@ -56,7 +56,6 @@ outbound-pipeline/
 │   ├── __init__.py
 │   └── test_pipeline.py            # Offline unit test suite with 100% pass guarantee
 ├── main.py                         # CLI entrypoint with runtime status banners
-├── factory.py                      # 7-agent Autonomous Software Factory
 ├── Dockerfile                      # Production container spec
 ├── docker-compose.yml              # Local orchestration spec
 ├── .dockerignore

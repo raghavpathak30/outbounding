@@ -24,6 +24,7 @@ from server.models.entities import (
     Person,
     Contact,
     Draft,
+    Profile,
     Review,
     PipelineEvent,
     Resume,
@@ -424,7 +425,8 @@ class JobManager:
                     domain=company.domain,
                     resume_context=resume_context,
                     contact_name=leader_data.get("full_name") or leader_data.get("first_name"),
-                    company_context=company_context
+                    company_context=company_context,
+                    operator_profile=self._load_operator_profile(session, campaign)
                 )
 
                 # Split Subject if present
@@ -538,6 +540,20 @@ class JobManager:
 
         # Fallback to offline resume.json
         return load_resume_context()
+
+    def _load_operator_profile(self, session: Session, campaign: Campaign) -> Optional[Dict[str, Any]]:
+        """Loads the drafting-relevant Profile fields of the campaign's owner, or None if no Profile exists."""
+        profile = session.execute(
+            select(Profile).where(Profile.user_id == campaign.user_id)
+        ).scalar_one_or_none()
+        if not profile:
+            return None
+        return {
+            "custom_instructions": profile.custom_instructions,
+            "portfolio_url": profile.portfolio_url,
+            "github_url": profile.github_url,
+            "linkedin_url": profile.linkedin_url,
+        }
 
     def _record_event(
         self,

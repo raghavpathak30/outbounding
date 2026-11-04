@@ -41,6 +41,7 @@ from server.models.entities import (
     Person,
     Contact,
     Draft,
+    Profile,
     Review,
     Delivery,
     PipelineEvent,
@@ -850,3 +851,52 @@ def test_startup_recovery_does_not_deliver_waiting_for_delivery(delivery_ctx):
         deliv = db.execute(select(Delivery).where(Delivery.pipeline_run_id == run.id)).scalar_one_or_none()
         assert deliv is None
         db.close()
+
+
+# =====================================================================
+# Operator Profile portfolio in delivery payload
+# =====================================================================
+
+def _live_delivery_portfolio(delivery_ctx, monkeypatch, domain):
+    monkeypatch.setenv("DELIVERY_MODE", "live")
+    monkeypatch.setenv("DRY_RUN", "false")
+    monkeypatch.setenv("CONFIRM_LIVE", "true")
+    seed = delivery_ctx["seed_delivery_run"](domain=domain)
+    mock_adapter = MockTestDeliveryAdapter()
+
+    with patch("pipeline.adapters.base.AdapterFactory.get_delivery_adapter", return_value=mock_adapter):
+        res = delivery_ctx["client1"].post(f"/api/v1/deliveries/{seed['run'].id}")
+
+    assert res.status_code == 200
+    assert mock_adapter.call_count == 1
+    return mock_adapter.calls[0]["payload"]["custom_variables"]["candidate_portfolio"]
+
+
+def test_delivery_payload_uses_campaign_owner_portfolio(delivery_ctx, monkeypatch):
+    db = delivery_ctx["db"]()
+    db.add(Profile(
+        user_id=delivery_ctx["u1_id"],
+        full_name="Owner",
+        title="Engineer",
+        email="owner@example.com",
+        portfolio_url="https://owner.example/portfolio",
+    ))
+    db.add(Profile(
+        user_id=delivery_ctx["u2_id"],
+        full_name="Other",
+        title="Engineer",
+        email="other@example.com",
+        portfolio_url="https://other.example/portfolio",
+    ))
+    db.commit()
+    db.close()
+
+    portfolio = _live_delivery_portfolio(delivery_ctx, monkeypatch, "profile-portfolio.io")
+
+    assert portfolio == "https://owner.example/portfolio"
+
+
+def test_delivery_payload_portfolio_empty_without_profile(delivery_ctx, monkeypatch):
+    portfolio = _live_delivery_portfolio(delivery_ctx, monkeypatch, "no-profile-portfolio.io")
+
+    assert portfolio == ""

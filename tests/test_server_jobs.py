@@ -33,6 +33,7 @@ from server.models.entities import (
     Person,
     Contact,
     Draft,
+    Profile,
     Review,
     Delivery,
     PipelineEvent,
@@ -814,3 +815,73 @@ def test_database_entity_reuse_avoids_duplicate_provider_calls(job_ctx):
     assert run_obj.status == "waiting_for_review"
     assert run_obj.last_completed_stage == "draft_generated"
     session.close()
+
+
+# =====================================================================
+# Operator Profile drives drafting
+# =====================================================================
+
+def _run_pipeline_recording_draft_kwargs(job_ctx, owner_id):
+    """Executes one run for a campaign owned by owner_id and returns the kwargs passed to draft()."""
+    session_factory = job_ctx["session_factory"]
+    session = session_factory()
+    campaign = Campaign(user_id=owner_id, name="Profile Campaign", objective="Objective")
+    session.add(campaign)
+    session.commit()
+    company = Company(
+        campaign_id=campaign.id,
+        domain="apex-vault-fintech.io",
+        company_name="Apex Vault Fintech",
+        selection_status="selected",
+    )
+    session.add(company)
+    session.commit()
+    run = PipelineRun(campaign_id=campaign.id, company_id=company.id, status="queued")
+    session.add(run)
+    session.commit()
+    run_id = run.id
+    session.close()
+
+    adapter = MagicMock()
+    adapter.draft.return_value = "Subject: Hi\n\nBody"
+    with patch("pipeline.adapters.base.AdapterFactory.get_drafting_adapter", return_value=adapter):
+        job_ctx["job_manager"].submit_run(run_id).result(timeout=10.0)
+
+    session = session_factory()
+    status = session.execute(select(PipelineRun).where(PipelineRun.id == run_id)).scalar_one().status
+    session.close()
+    assert status == "waiting_for_review"
+    return adapter.draft.call_args.kwargs
+
+
+def test_drafting_receives_campaign_owner_profile(job_ctx):
+    """The campaign owner's Profile reaches draft(), not another operator's."""
+    session = job_ctx["session_factory"]()
+    for user_id, label in [(job_ctx["u1_id"], "owner"), (job_ctx["u2_id"], "other")]:
+        session.add(Profile(
+            user_id=user_id,
+            full_name=label,
+            title="Engineer",
+            email=f"{label}@example.com",
+            custom_instructions=f"{label} instructions",
+            portfolio_url=f"https://{label}.example/portfolio",
+            github_url=f"https://github.com/{label}",
+            linkedin_url=f"https://linkedin.com/in/{label}",
+        ))
+    session.commit()
+    session.close()
+
+    kwargs = _run_pipeline_recording_draft_kwargs(job_ctx, job_ctx["u1_id"])
+
+    assert kwargs["operator_profile"] == {
+        "custom_instructions": "owner instructions",
+        "portfolio_url": "https://owner.example/portfolio",
+        "github_url": "https://github.com/owner",
+        "linkedin_url": "https://linkedin.com/in/owner",
+    }
+
+
+def test_drafting_tolerates_owner_without_profile(job_ctx):
+    kwargs = _run_pipeline_recording_draft_kwargs(job_ctx, job_ctx["u1_id"])
+
+    assert kwargs["operator_profile"] is None

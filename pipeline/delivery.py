@@ -4,7 +4,7 @@ Delivery Node implementation with safety staging and webhook payload formatting.
 from typing import Dict, Any
 import os
 from pipeline.state import PipelineState
-from pipeline.adapters.base import AdapterFactory
+from pipeline.adapters.base import AdapterFactory, resolve_portfolio_url
 from pipeline.contacted_log import record_contacted
 from pipeline.config import ALLOW_ACCEPT_ALL, is_blacklisted
 
@@ -79,7 +79,7 @@ def delivery_node(state: PipelineState) -> Dict[str, Any]:
         "custom_variables": {
             "company_domain": domain,
             "role_title": role,
-            "candidate_portfolio": "https://raghavpathak.dev"
+            "candidate_portfolio": resolve_portfolio_url(state.get("resume_context"), state.get("operator_profile"))
         }
     }
     if state.get("company_context"):

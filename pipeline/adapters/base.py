@@ -5,6 +5,16 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List
 import os
 
+
+def resolve_portfolio_url(resume_context: Optional[Dict[str, Any]], operator_profile: dict | None = None) -> str:
+    """Returns the profile portfolio URL, else the resume's, else an empty string."""
+    profile_url = ((operator_profile or {}).get("portfolio_url") or "").strip()
+    if profile_url:
+        return profile_url
+    personal = (resume_context or {}).get("personal") or {}
+    return (personal.get("portfolio") or "").strip()
+
+
 class DiscoveryAdapter(ABC):
     @abstractmethod
     def discover(
@@ -56,8 +66,8 @@ class EmailResolutionAdapter(ABC):
 
 class DraftingAdapter(ABC):
     @abstractmethod
-    def draft(self, role: Optional[str], domain: str, resume_context: Dict[str, Any], contact_name: Optional[str], company_context: Optional[Dict[str, Any]] = None) -> str:
-        """Draft a tailored outreach pitch based on role, resume highlights, and optional company context."""
+    def draft(self, role: Optional[str], domain: str, resume_context: Dict[str, Any], contact_name: Optional[str], company_context: Optional[Dict[str, Any]] = None, operator_profile: dict | None = None) -> str:
+        """Draft a tailored outreach pitch based on role, resume highlights, optional company context, and the operator's profile."""
         pass
 
 class DeliveryAdapter(ABC):

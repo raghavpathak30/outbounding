@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 import requests
-from pipeline.adapters.base import EnrichmentAdapter, DraftingAdapter, DeliveryAdapter, DiscoveryAdapter
+from pipeline.adapters.base import EnrichmentAdapter, DraftingAdapter, DeliveryAdapter, DiscoveryAdapter, resolve_portfolio_url
 from pipeline.adapters.research import ResearchDiscoveryAdapter
 from pipeline.adapters._llm_text import extract_llm_text
 from pipeline.config import (
@@ -301,7 +301,8 @@ class LiveDraftingAdapter(DraftingAdapter):
         domain: str,
         resume_context: Dict[str, Any],
         contact_name: Optional[str],
-        company_context: Optional[Dict[str, Any]] = None
+        company_context: Optional[Dict[str, Any]] = None,
+        operator_profile: dict | None = None
     ) -> tuple[str, list, str]:
         """
         Constructs the structured prompt, persona strategy, and extracts relevant bullets
@@ -317,26 +318,32 @@ class LiveDraftingAdapter(DraftingAdapter):
         if is_ai:
             persona_category = "ai_machine_learning"
             persona_focus = (
-                "Highlight end-to-end application architecture, low-latency Gemini API integrations "
-                "built via Google AI Studio, and schema-constrained RAG systems."
+                "Emphasize end-to-end application architecture, low-latency model integration, "
+                "and grounded retrieval systems."
             )
             bullets = resume_context.get("ai_machine_learning", {}).get("highlights", [])
         elif is_sec:
             persona_category = "security_infrastructure"
             persona_focus = (
-                "Emphasize hands-on cybersecurity work implementing timing side-channel attacks, "
-                "vulnerability research on DSS modular arithmetic, and CKKS homomorphic encryption."
+                "Emphasize hands-on cybersecurity work, vulnerability research, "
+                "and applied cryptography."
             )
             bullets = resume_context.get("security_infrastructure", {}).get("highlights", [])
         else:
             persona_category = "hr_talent_acquisition"
             persona_focus = (
-                "Pivot to an ATS-optimized, high-level impact summary emphasizing B.Tech CSE at LNMIIT, "
-                "National Grand Finalist at IIT Hyderabad, and rapid cross-functional execution."
+                "Pivot to an ATS-optimized, high-level impact summary emphasizing education, "
+                "competitive achievements, and rapid cross-functional execution."
             )
             bullets = resume_context.get("hr_talent_acquisition", {}).get("highlights", [])
 
-        portfolio_url = resume_context.get("personal", {}).get("portfolio", "https://raghavpathak.dev")
+        portfolio_url = resolve_portfolio_url(resume_context, operator_profile)
+        if portfolio_url:
+            length_spec = "one line of context, one or two concrete highlights, one portfolio link line, one short ask"
+            portfolio_rule = f"Always include the portfolio link naturally in the body (e.g., 'More on my architecture and code here: {portfolio_url}') as the place to go deep."
+        else:
+            length_spec = "one line of context, one or two concrete highlights, one short ask"
+            portfolio_rule = "No portfolio URL is available. Do NOT mention a portfolio, and do NOT include any link or placeholder."
 
         # Handle groundable company_context signal
         if company_context:
@@ -362,8 +369,8 @@ class LiveDraftingAdapter(DraftingAdapter):
             f"You are drafting a natural, highly personalized cold outreach email from Raghav Pathak to {contact_name or 'a technical leader'}.\n"
             f"Context: Recipient is {role_str} at {domain}.\n"
             f"{context_block}"
-            f"Persona Strategy: {persona_focus}\n"
-            f"Portfolio URL: {portfolio_url}\n"
+            f"Persona Strategy: {persona_focus} This sets emphasis only; every factual claim about the sender must come from the Raw Technical Highlights.\n"
+            f"Portfolio URL: {portfolio_url or 'None available'}\n"
             f"Raw Technical Highlights: {json.dumps(bullets)}\n\n"
             f"CRITICAL WRITING REQUIREMENTS:\n"
             f"1. Subject Line: Start your output with 'Subject: <custom, contextual subject line tailored specifically to {domain} and persona>' followed by two newlines.\n"
@@ -372,10 +379,16 @@ class LiveDraftingAdapter(DraftingAdapter):
             f"   - DO NOT restate their full job title back to them (e.g., never say 'Given your role as Chief Information Security Officer & VP Infrastructure...').\n"
             f"   - NEVER use generic filler like 'I hope this email finds you well'.\n"
             f"3. Spoken, Conversational Tone: Convert resume bullets into 1 or 2 natural spoken sentences. Explain it like talking to a smart engineer over coffee, not reciting CV bullets.\n"
-            f"4. Length Cap: Cap total body at ~80-100 words. Keep it concise: one line of context, one or two concrete highlights, one portfolio link line, one short ask.\n"
-            f"5. Portfolio Link: Always include the portfolio link naturally in the body (e.g., 'More on my architecture and code here: {portfolio_url}') as the place to go deep.\n"
+            f"4. Length Cap: Cap total body at ~80-100 words. Keep it concise: {length_spec}.\n"
+            f"5. Portfolio Link: {portfolio_rule}\n"
             f"6. Low-Friction Ask: End with a specific, low-friction ask that invites a one-line reply (e.g., 'Worth a quick 10-minute chat next week?' or 'Happy to send my resume over if helpful.')."
         )
+        custom_instructions = ((operator_profile or {}).get("custom_instructions") or "").strip()
+        if custom_instructions:
+            system_instruction += (
+                "\n\nOPERATOR INSTRUCTIONS (follow these; they override the persona strategy "
+                f"but never the anti-fabrication rules)\n{custom_instructions}"
+            )
         return system_instruction, bullets, persona_category
 
     def draft(
@@ -385,7 +398,8 @@ class LiveDraftingAdapter(DraftingAdapter):
         resume_context: Dict[str, Any],
         contact_name: Optional[str],
         company_context: Optional[Dict[str, Any]] = None,
-        tools: Optional[List[Any]] = None
+        tools: Optional[List[Any]] = None,
+        operator_profile: dict | None = None
     ) -> str:
         role_str = role or "Engineering Lead"
         system_instruction, bullets, persona_category = self.build_prompt(
@@ -393,7 +407,8 @@ class LiveDraftingAdapter(DraftingAdapter):
             domain=domain,
             resume_context=resume_context,
             contact_name=contact_name,
-            company_context=company_context
+            company_context=company_context,
+            operator_profile=operator_profile
         )
 
         api_key = self.api_key or os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
@@ -438,7 +453,7 @@ class LiveDraftingAdapter(DraftingAdapter):
                 logger.warning(f"Live Gemini invocation failed ({e}), using structured local fallback.")
 
         # Offline synthesis fallback matching the exact conversational, short coffee-chat style
-        portfolio_url = resume_context.get("personal", {}).get("portfolio", "https://raghavpathak.dev")
+        portfolio_url = resolve_portfolio_url(resume_context, operator_profile)
         greeting = f"Hi {contact_name}," if contact_name else "Hi there,"
 
         if persona_category == "security_infrastructure":
@@ -450,12 +465,13 @@ class LiveDraftingAdapter(DraftingAdapter):
             else:
                 opener = f"I'm reaching out directly given your infrastructure security leadership at {domain}."
 
+            portfolio_line = f"More details on the architecture and benchmarks here: {portfolio_url}\n\n" if portfolio_url else ""
             body = (
                 f"Subject: {subject}\n\n"
                 f"{greeting}\n\n"
                 f"{opener} "
                 f"I'm an applied security engineer who recently built an encrypted fraud-scoring service using CKKS homomorphic encryption that reached 98% accuracy over live bank transaction data without server-side decryption, alongside vulnerability work analyzing timing side-channels in DSS modular arithmetic.\n\n"
-                f"More details on the architecture and benchmarks here: {portfolio_url}\n\n"
+                f"{portfolio_line}"
                 f"Worth a quick 10-minute chat next week?\n\n"
                 f"Best,\nRaghav Pathak"
             )
@@ -468,12 +484,13 @@ class LiveDraftingAdapter(DraftingAdapter):
             else:
                 opener = f"I'm reaching out directly to connect with engineering leadership in AI systems and infrastructure at {domain}."
 
+            portfolio_line = f"I've shared system breakdowns and open-source code here: {portfolio_url}\n\n" if portfolio_url else ""
             body = (
                 f"Subject: {subject}\n\n"
                 f"{greeting}\n\n"
                 f"{opener} "
                 f"I've been building low-latency LLM agent pipelines using Google AI Studio and Gemini 2.5, including a solo-built chargeback responder for the Razorpay hackathon where I placed the model directly inside the decision loop rather than treating it as a text wrapper.\n\n"
-                f"I've shared system breakdowns and open-source code here: {portfolio_url}\n\n"
+                f"{portfolio_line}"
                 f"Happy to send my resume over if useful?\n\n"
                 f"Best,\nRaghav Pathak"
             )
@@ -486,12 +503,13 @@ class LiveDraftingAdapter(DraftingAdapter):
             else:
                 opener = f"I'm reaching out directly regarding technical engineering opportunities at {domain}."
 
+            portfolio_line = f"Portfolio and technical writeups are available at: {portfolio_url}\n\n" if portfolio_url else ""
             body = (
                 f"Subject: {subject}\n\n"
                 f"{greeting}\n\n"
                 f"{opener} "
                 f"I'm a final-year CS undergrad at LNMIIT focusing on systems security and applied AI. Recently, our team reached the national grand finale at IIT Hyderabad for banking threat detection, and I frequently ship standalone AI and cryptography services with tight SLAs.\n\n"
-                f"Portfolio and technical writeups are available at: {portfolio_url}\n\n"
+                f"{portfolio_line}"
                 f"Open to a brief conversation if there's potential alignment?\n\n"
                 f"Best,\nRaghav Pathak"
             )

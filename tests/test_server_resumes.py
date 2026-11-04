@@ -209,7 +209,7 @@ def test_stub_adapter_produces_deterministic_parsed_output(tmp_path):
     # Validate against strict Pydantic ResumeSchema
     validated = ResumeSchema.model_validate(parsed)
     assert validated.personal.name == "Raghav Pathak"
-    assert validated.personal.portfolio == "https://raghavpathak.dev"
+    assert validated.personal.portfolio == ""
 
     # Security Infrastructure persona
     assert len(validated.security_infrastructure.highlights) >= 3

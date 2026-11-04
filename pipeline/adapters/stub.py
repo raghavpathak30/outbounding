@@ -288,7 +288,7 @@ class StubEnrichmentAdapter(EnrichmentAdapter):
 class StubDraftingAdapter(DraftingAdapter):
     """Returns structured, deterministic outreach pitches mapped to personas."""
 
-    def draft(self, role: Optional[str], domain: str, resume_context: Dict[str, Any], contact_name: Optional[str], company_context: Optional[Dict[str, Any]] = None) -> str:
+    def draft(self, role: Optional[str], domain: str, resume_context: Dict[str, Any], contact_name: Optional[str], company_context: Optional[Dict[str, Any]] = None, operator_profile: dict | None = None) -> str:
         role_str = (role or "").lower()
         name_greeting = f"Hi {contact_name}," if contact_name else "Hello,"
 

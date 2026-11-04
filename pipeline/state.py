@@ -17,6 +17,7 @@ class PipelineState(TypedDict, total=False):
     discover: Optional[bool]
     company_size: Optional[str]
     resume_context: Dict[str, Any]
+    operator_profile: Optional[Dict[str, Any]]
     email_draft: Optional[str]
     email_subject: Optional[str]
     auto_approve: Optional[bool]

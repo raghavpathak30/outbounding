@@ -45,7 +45,8 @@ def drafting_node(state: PipelineState) -> Dict[str, Any]:
         domain=domain,
         resume_context=resume_context,
         contact_name=contact_name,
-        company_context=company_context
+        company_context=company_context,
+        operator_profile=state.get("operator_profile")
     )
 
     return {

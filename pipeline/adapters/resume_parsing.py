@@ -59,7 +59,7 @@ class StubResumeParsingAdapter(ResumeParsingAdapter):
             "location": "Jaipur / Noida, India",
             "github": "https://github.com/raghavpathak30",
             "linkedin": "https://linkedin.com/in/raghav-pathak",
-            "portfolio": "https://raghavpathak.dev"
+            "portfolio": ""
         },
         "security_infrastructure": {
             "summary": "Specialist in applied cryptography, timing side-channel attack analysis, and containerized DevSecOps pipelines.",

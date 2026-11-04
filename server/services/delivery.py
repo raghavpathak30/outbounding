@@ -37,6 +37,7 @@ from server.models.entities import (
     Person,
     Contact,
     Draft,
+    Profile,
     Review,
     Delivery,
     PipelineEvent,
@@ -551,6 +552,9 @@ class DeliveryService:
             recipient_name = person.full_name if person and person.full_name else (person.first_name if person else "Colleague")
             recipient_role = person.role if person and person.role else "Lead"
             opt_out_footer = "\n\n---\nIf you prefer not to receive technical outreach, simply reply with 'unsubscribe' to be permanently removed."
+            owner_profile = db.execute(
+                select(Profile).where(Profile.user_id == campaign.user_id)
+            ).scalar_one_or_none()
 
             payload = {
                 "campaign_id": campaign.id,
@@ -566,7 +570,7 @@ class DeliveryService:
                 "custom_variables": {
                     "company_domain": company.domain,
                     "role_title": recipient_role,
-                    "candidate_portfolio": "https://raghavpathak.dev",
+                    "candidate_portfolio": (owner_profile.portfolio_url if owner_profile else "") or "",
                     "person_confidence": str(person_conf_float),
                     "email_verification_status": ver_status
                 }

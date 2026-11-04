@@ -2276,7 +2276,10 @@ def get_campaign_detail_html() -> str:
         const res = await fetch(`/api/v1/campaigns/${{campaignId}}/enqueue-selected`, {{ method: 'POST' }});
         const data = await res.json();
         if (res.ok) {{
-          showToast(`Enqueued ${{data.enqueued_count}} runs for execution!`);
+          const skippedNote = data.skipped_count ? ` ${{data.skipped_count}} already in progress / done.` : '';
+          showToast(data.enqueued_count
+            ? `Enqueued ${{data.enqueued_count}} runs for execution!${{skippedNote}}`
+            : `Nothing to enqueue.${{skippedNote}}`);
           await loadCompanies();
           await loadRuns();
         }} else {{

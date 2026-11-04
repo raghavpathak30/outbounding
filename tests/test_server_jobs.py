@@ -656,6 +656,10 @@ def test_concurrent_enqueue_prevents_duplicate_active_runs(job_ctx):
     for r in results:
         assert r.status_code == 200
 
+    # Exactly one request enqueued the company; the other four report it as skipped
+    assert sum(r.json()["enqueued_count"] for r in results) == 1
+    assert sum(r.json()["skipped_count"] for r in results) == 4
+
     # Query the database: exactly ONE active PipelineRun should exist
     session = session_factory()
     runs = list(session.execute(
@@ -674,12 +678,14 @@ def test_concurrent_enqueue_prevents_duplicate_active_runs(job_ctx):
         fut.result(timeout=10.0)
 
     session.refresh(run_obj)
-    assert run_obj.status in ["waiting_for_review", "skipped", "failed"]
+    assert run_obj.status in ["waiting_for_review", "skipped"]
     session.close()
 
-    # Re-enqueuing after reaching terminal/review state should allow creating a new run
+    # Re-enqueuing after reaching a non-failed state must not create a new run
     res_after = client1.post(f"/api/v1/campaigns/{c1_id}/enqueue-selected")
     assert res_after.status_code == 200
+    assert res_after.json()["enqueued_count"] == 0
+    assert res_after.json()["skipped_count"] == 1
     session = session_factory()
     runs_after = list(session.execute(
         select(PipelineRun).where(
@@ -687,8 +693,7 @@ def test_concurrent_enqueue_prevents_duplicate_active_runs(job_ctx):
             PipelineRun.company_id == comp_id
         )
     ).scalars().all())
-    # Should now have 2 runs (one previous terminal run, one newly queued run)
-    assert len(runs_after) == 2
+    assert len(runs_after) == 1
     session.close()
 
 
@@ -951,3 +956,131 @@ def test_draft_failure_fails_run_without_draft_and_retry_reuses_prior_stages(job
     assert draft.pipeline_run_id == retry_run_id
     assert draft.body == "Model-written body"
     session.close()
+
+
+# =====================================================================
+# Enqueue skips companies that were already processed
+# =====================================================================
+
+def _seed_selected_companies(job_ctx, *domains):
+    """Creates a campaign with selected companies; returns (campaign_id, [company_id, ...])."""
+    session = job_ctx["session_factory"]()
+    campaign = Campaign(user_id=job_ctx["u1_id"], name="Enqueue Campaign", objective="Objective")
+    session.add(campaign)
+    session.commit()
+    companies = [
+        Company(campaign_id=campaign.id, domain=d, company_name=d, selection_status="selected")
+        for d in domains
+    ]
+    session.add_all(companies)
+    session.commit()
+    ids = campaign.id, [c.id for c in companies]
+    session.close()
+    return ids
+
+
+def _seed_run(job_ctx, campaign_id, company_id, status):
+    session = job_ctx["session_factory"]()
+    session.add(PipelineRun(campaign_id=campaign_id, company_id=company_id, status=status))
+    session.commit()
+    session.close()
+
+
+def _enqueue(job_ctx, campaign_id):
+    res = job_ctx["client1"].post(f"/api/v1/campaigns/{campaign_id}/enqueue-selected")
+    assert res.status_code == 200
+    data = res.json()
+    for run in data["runs"]:
+        job_ctx["job_manager"].get_future(run["id"]).result(timeout=10.0)
+    return data
+
+
+def test_enqueuing_already_drafted_company_twice_gives_one_draft_and_one_review(job_ctx):
+    campaign_id, (company_id,) = _seed_selected_companies(job_ctx, "apex-vault-fintech.io")
+
+    first = _enqueue(job_ctx, campaign_id)
+    second = _enqueue(job_ctx, campaign_id)
+
+    assert (first["enqueued_count"], first["skipped_count"]) == (1, 0)
+    assert first["enqueued_company_ids"] == [company_id]
+    assert (second["enqueued_count"], second["skipped_count"]) == (0, 1)
+    assert second["enqueued_company_ids"] == []
+    assert second["skipped_company_ids"] == [company_id]
+    assert second["runs"] == []
+    assert second["status"] == "skipped"
+
+    session = job_ctx["session_factory"]()
+    assert len(session.execute(select(PipelineRun)).scalars().all()) == 1
+    assert len(session.execute(select(Draft)).scalars().all()) == 1
+    assert len(session.execute(select(Review)).scalars().all()) == 1
+    session.close()
+
+
+@pytest.mark.parametrize("status", [
+    "queued",
+    "running",
+    "waiting_for_review",
+    "waiting_for_delivery",
+    "completed",
+    "skipped",
+    "cancelled",
+])
+def test_enqueue_skips_company_with_non_failed_run(job_ctx, status):
+    campaign_id, (company_id,) = _seed_selected_companies(job_ctx, "apex-vault-fintech.io")
+    _seed_run(job_ctx, campaign_id, company_id, status)
+
+    data = _enqueue(job_ctx, campaign_id)
+
+    assert (data["enqueued_count"], data["skipped_count"]) == (0, 1)
+    session = job_ctx["session_factory"]()
+    assert len(session.execute(select(PipelineRun)).scalars().all()) == 1
+    session.close()
+
+
+def test_enqueue_only_runs_failed_and_never_run_companies(job_ctx):
+    campaign_id, (never_run, failed, drafted, retried) = _seed_selected_companies(
+        job_ctx, "never-run.io", "failed.io", "drafted.io", "retried.io"
+    )
+    _seed_run(job_ctx, campaign_id, failed, "failed")
+    _seed_run(job_ctx, campaign_id, drafted, "waiting_for_review")
+    # A failed attempt followed by a successful retry counts as done.
+    _seed_run(job_ctx, campaign_id, retried, "failed")
+    _seed_run(job_ctx, campaign_id, retried, "completed")
+
+    data = _enqueue(job_ctx, campaign_id)
+
+    assert data["status"] == "queued"
+    assert sorted(data["enqueued_company_ids"]) == sorted([never_run, failed])
+    assert sorted(data["skipped_company_ids"]) == sorted([drafted, retried])
+    assert data["enqueued_count"] == 2
+    assert data["skipped_count"] == 2
+    assert sorted(r["company_id"] for r in data["runs"]) == sorted([never_run, failed])
+
+
+def test_startup_recovery_resubmits_stranded_queued_runs(job_ctx):
+    """Queued work is lost from the in-memory executor on restart, and enqueue now skips it."""
+    campaign_id, (company_id,) = _seed_selected_companies(job_ctx, "apex-vault-fintech.io")
+    session = job_ctx["session_factory"]()
+    run = PipelineRun(campaign_id=campaign_id, company_id=company_id, status="queued")
+    session.add(run)
+    session.commit()
+    run_id = run.id
+    session.close()
+
+    recovered = job_ctx["job_manager"].recover_stale_runs()
+
+    assert run_id in recovered
+    job_ctx["job_manager"].get_future(run_id).result(timeout=10.0)
+    session = job_ctx["session_factory"]()
+    assert session.execute(select(PipelineRun).where(PipelineRun.id == run_id)).scalar_one().status == "waiting_for_review"
+    session.close()
+
+
+def test_campaign_page_toast_reports_skipped_companies(job_ctx):
+    campaign_id, _ = _seed_selected_companies(job_ctx, "apex-vault-fintech.io")
+
+    res = job_ctx["client1"].get(f"/campaigns/{campaign_id}")
+
+    assert res.status_code == 200
+    assert "already in progress / done" in res.text
+    assert "data.skipped_count" in res.text

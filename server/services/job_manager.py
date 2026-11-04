@@ -576,15 +576,16 @@ class JobManager:
 
     def recover_stale_runs(self) -> List[str]:
         """
-        Scans for interrupted runs in 'running' state on server startup and recovers them
-        by resuming from their latest checkpointed stage.
+        Scans for interrupted runs in 'running' or 'queued' state on server startup and
+        recovers them by resuming from their latest checkpointed stage. Queued runs live
+        only in the in-memory executor, and enqueue-selected will not start them again.
         """
         session: Session = self.session_factory()
         recovered_ids: List[str] = []
         try:
             stale_runs = list(
                 session.execute(
-                    select(PipelineRun).where(PipelineRun.status == "running")
+                    select(PipelineRun).where(PipelineRun.status.in_(["running", "queued"]))
                 ).scalars().all()
             )
             for r in stale_runs:

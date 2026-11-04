@@ -285,6 +285,8 @@ async def enqueue_selected_companies(
     Phase 6 Enqueue Selected:
     Validates selected companies, creates queued PipelineRun records, and submits
     them to the background JobManager for asynchronous pipeline execution.
+    Only never-run companies and companies whose every run failed are enqueued;
+    any other existing run means the company is in progress or done, so it is skipped.
     """
     campaign = CampaignService.get_campaign(db, current_user.id, campaign_id)
     if not campaign:
@@ -307,20 +309,20 @@ async def enqueue_selected_companies(
 
     job_manager = JobManager.get_instance()
     runs_to_submit = []
+    enqueued_company_ids = []
+    skipped_company_ids = []
 
     with _enqueue_lock:
-        for comp in selected_companies:
-            # Check if an existing run is already queued or running
-            existing_run = db.execute(
-                select(PipelineRun).where(
-                    PipelineRun.campaign_id == campaign_id,
-                    PipelineRun.company_id == comp.id,
-                    PipelineRun.status.in_(["queued", "running"])
-                )
-            ).scalar_one_or_none()
+        processed_company_ids = set(db.execute(
+            select(PipelineRun.company_id).where(
+                PipelineRun.campaign_id == campaign_id,
+                PipelineRun.status != "failed"
+            )
+        ).scalars().all())
 
-            if existing_run:
-                runs_to_submit.append(existing_run)
+        for comp in selected_companies:
+            if comp.id in processed_company_ids:
+                skipped_company_ids.append(comp.id)
                 continue
 
             run = PipelineRun(
@@ -343,19 +345,21 @@ async def enqueue_selected_companies(
             )
             db.add(event)
             runs_to_submit.append(run)
+            enqueued_company_ids.append(comp.id)
 
         db.commit()
 
     # Submit newly queued runs to JobManager executor
     for r in runs_to_submit:
-        if r.status == "queued":
-            job_manager.submit_run(r.id)
+        job_manager.submit_run(r.id)
 
     return {
-        "status": "queued",
+        "status": "queued" if runs_to_submit else "skipped",
         "campaign_id": campaign_id,
         "enqueued_count": len(runs_to_submit),
-        "enqueued_company_ids": [c.id for c in selected_companies],
+        "enqueued_company_ids": enqueued_company_ids,
+        "skipped_count": len(skipped_company_ids),
+        "skipped_company_ids": skipped_company_ids,
         "runs": [
             {
                 "id": r.id,
@@ -365,7 +369,11 @@ async def enqueue_selected_companies(
             }
             for r in runs_to_submit
         ],
-        "message": "Companies verified and queued for Phase 6 background pipeline execution."
+        "message": (
+            "Companies verified and queued for Phase 6 background pipeline execution."
+            if runs_to_submit
+            else "No companies queued: every selected company is already in progress or done."
+        )
     }
 
 
